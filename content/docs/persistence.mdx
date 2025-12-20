@@ -1,0 +1,25 @@
+---
+title: Persistence
+description: Learn about persistence in your app.
+---
+
+## Journey persistence and resume (draft)
+
+Journeys are designed to be resilient to:
+
+* page refresh
+* app background/foreground transitions
+* network drops
+* user returning later
+
+**Planned integration surface:**
+
+* pluggable storage adapters (web: `localStorage` / `IndexedDB`, mobile: secure storage)
+* snapshot persistence (minimal durable state)
+* optional event history for debugging and support
+
+**Practical impact for clients:**
+
+* fewer abandoned journeys due to “lost progress”
+* cleaner customer support diagnostics (“what step did the user reach?”)
+* easier conversion optimization (analytics at each state boundary)

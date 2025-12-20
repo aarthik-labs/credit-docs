@@ -1,0 +1,48 @@
+---
+title: Response and Error Handling
+description: Learn about response and error handling in your app.
+---
+
+## Response and error handling
+
+The SDK returns a consistent response shape:
+
+### Success
+
+```ts
+{
+  data: T,
+  error: null,
+  status: number,
+  correlationID: string,
+  headers: Headers
+}
+```
+
+### Failure
+
+```ts
+{
+  data: null,
+  error: AarthikError,
+  status?: number,
+  correlationID: string,
+  headers?: Headers
+}
+```
+
+### Stable error codes
+
+* `CONFIG_ERROR` — configuration issue (invalid baseURL, missing fetch, etc.)
+* `NETWORK_ERROR` — connectivity / fetch failures
+* `TIMEOUT` — request exceeded timeout
+* `ABORTED` — canceled via `AbortController` / `AbortSignal`
+* `HTTP_ERROR` — non-2xx response
+* `PARSE_ERROR` — response parsing failed
+* `UNKNOWN_ERROR` — safe fallback
+
+### Recommended handling pattern
+
+* Log `correlationID` and `error.code`
+* Retry on retryable failure modes (depending on UX)
+* Provide “Try again” UI for user-controlled retries when appropriate

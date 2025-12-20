@@ -1,0 +1,35 @@
+---
+title: Multi-Tenancy
+description: Learn about multi-tenancy in your app.
+---
+
+## Multi-tenancy (recommended patterns)
+
+### Scoped client (recommended)
+
+```ts
+const tenantCredit = credit.withTenant("tenant_123");
+
+// All calls from this instance are tenant-scoped automatically
+await tenantCredit.request("/some/path");
+```
+
+### Per-request override (useful for edge cases)
+
+```ts
+await credit.request("/some/path", {
+  tenantID: "tenant_override",
+});
+```
+
+### Dynamic tenant resolution (if tenant is in app state)
+
+```ts
+const credit = createCreditClient({
+  baseURL: "https://YOUR_BASE_URL",
+  tenant: {
+    resolveTenantID: async () =>
+      window.sessionStorage.getItem("tenant_id") ?? undefined,
+  },
+});
+```

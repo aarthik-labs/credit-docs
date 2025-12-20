@@ -1,0 +1,14 @@
+---
+title: Adoption Guide
+description: a guide on how to adopt the SDK into your code-base
+---
+
+## The Parts That Make It Whole
+
+You can adopt the SDK in layers.
+
+| Path                         | Best for                     | You build                                       | SDK provides                                              |
+| ---------------------------- | ---------------------------- | ----------------------------------------------- | --------------------------------------------------------- |
+| **Headless only**            | You already have UI patterns | All UI + state                                  | Client + typing + reliability + journey engine (headless) |
+| **UI + headless**            | Fastest integration          | Minimal UI wiring                               | UI components + theming + journeys + transport            |
+| **Hybrid (server-assisted)** | Strict security/compliance   | Small backend for tokens / sensitive operations | Same SDK patterns on server and client                    |

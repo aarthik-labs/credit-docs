@@ -1,0 +1,21 @@
+---
+title: Road-Map
+description: a peek into the future of our platform
+---
+
+Near-term additions aligned with the current architecture:
+
+* Domain namespaces (illustrative): `offers`, `applications`, `journeys`, `events`, `theme`, `session`
+* React UI components:
+
+  * embeddable journey container
+  * status + outcome screens
+  * retry/error UI patterns
+* Journey persistence adapters:
+
+  * `localStorage` + `IndexedDB` (web)
+  * pluggable storage interface for mobile + server
+* Event normalization:
+
+  * polling fallback
+  * optional SSE/WebSocket support (where applicable)

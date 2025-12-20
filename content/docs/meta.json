@@ -1,0 +1,32 @@
+{
+  "title": "Credit SDK by Aarthik Labs",
+  "description": "The SDK to build for credit in India",
+  "icon": "Building",
+  "root": true,
+  "pages": [
+    "---Introduction---",
+    "index",
+    "what-you-get",
+    "what-this-document-is-not",
+    "road-map",
+    "faq",
+    "---Getting Started---",
+    "getting-started/quickstart",
+    "getting-started/adoption-guide",
+    "getting-started/core-concepts",
+    "---Auth---",
+    "auth/auth-and-security-model",
+    "auth/multi-tenancy",
+    "---Journeys---",
+    "journeys/credit-journeys",
+    "journeys/app-integration-with-journeys",
+    "asynchronous-updates",
+    "extensibility",
+    "persistence",
+    "reliability-and-observability",
+    "response-and-error-handling",
+    "state-to-ui",
+    "states-and-transitions",
+    "ui-and-theming"
+  ]
+}

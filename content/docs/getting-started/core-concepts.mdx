@@ -1,0 +1,24 @@
+---
+title: Core Concepts
+description: Learn about the core concepts in your app.
+---
+
+## Core concepts
+
+### Client instance
+
+A client instance represents:
+
+* your default configuration (base URL, auth, tenancy, reliability)
+* your integration contract (stable error model, headers, hooks)
+* an extension surface (plugins + domain modules)
+
+### Tenant scoping
+
+A tenant is the **scope boundary** for multi-customer or multi-merchant integrations (e.g., “which customer is this request for?”).
+
+The SDK supports tenant scoping via:
+
+1. client default (`tenant.defaultTenantID`)
+2. per-call override (`tenantID` in request options)
+3. scoped clients (`credit.withTenant("tenant_123")`) — recommended

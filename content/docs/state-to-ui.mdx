@@ -1,0 +1,20 @@
+---
+title: State to UI
+description: Learn about state to UI in your app.
+---
+
+## State-to-UI mapping (what you build vs what the SDK handles)
+
+| Journey state       | User sees               | Your app does                    | SDK handles                                                      |
+| ------------------- | ----------------------- | -------------------------------- | ---------------------------------------------------------------- |
+| `idle`              | Nothing / entry CTA     | Render CTA / entry point         | Ready-to-start state                                             |
+| `discovering`       | Loading / progress      | Show loader, allow cancel        | Request, timeout, retry policy, correlation ID                   |
+| `reviewingOffers`   | Offer list / comparison | Render offers UI                 | Normalizes offer output into UI-friendly form                    |
+| `collectingDetails` | Form steps              | Render form UI, local validation | Defines required inputs + handles persistence hooks              |
+| `submitting`        | Submitting…             | Disable actions                  | Idempotency, retries, safe error mapping                         |
+| `awaitingUpdates`   | Status timeline         | Show tracking UI                 | Polling / event updates normalization (implementation-dependent) |
+| `actionRequired`    | “We need one more step” | Collect extra input              | Resubmission patterns, state continuity                          |
+| `approved`          | Approved screen         | Confirm/accept                   | Moves to completion + emits final state                          |
+| `rejected`          | Outcome screen          | Show next steps                  | Stable outcome + consistent messaging hooks                      |
+| `recoverableError`  | Retry UI                | Show retry + exit                | Error code taxonomy + retry safe defaults                        |
+| `terminalError`     | Error + support CTA     | Provide fallback                 | Correlation ID + structured error metadata                       |

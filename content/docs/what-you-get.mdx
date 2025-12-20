@@ -1,0 +1,41 @@
+---
+title: What You Get?
+description: a brief about what comes out-of-the-box with the SDK
+---
+
+## The Parts That Make It Whole
+
+### 1) Headless SDK core (client + transport)
+
+A configured client instance provides:
+
+* **Tenant scoping** (client default, per request override, or scoped client)
+* **Auth injection** (static token or dynamic token resolver)
+* **Timeouts + retries** (conservative defaults; configurable)
+* **Abort/cancel support** (`AbortSignal`)
+* **Correlation IDs** for every request (for traceability)
+* **Idempotency keys** support for safe write operations
+
+### 2) Strong typing (TypeScript)
+
+* SDK ships TypeScript types to reduce integration guesswork and refactor risk.
+* Types are designed to be **app-friendly**: clear fields, composable structures, and consistent patterns.
+
+### 3) Optional UI layer (React)
+
+For teams optimizing for speed-to-market:
+
+* Drop-in, embeddable React primitives for common credit screens and layouts
+* **White-label theming** using CSS variables (container-scoped, no global CSS collisions)
+* Dark mode support without requiring changes to `<html>` in the host app
+
+### 4) Journey orchestration (workflow layer)
+
+Credit journeys often span multiple screens, network steps, and asynchronous updates.
+
+The SDK models this as a **journey** that:
+
+* moves through **clear, named steps**
+* accepts **user actions** and **external updates**
+* exposes a **single source of truth** for “where the user is”
+* can be **persisted and resumed** (crash-safe, refresh-safe)

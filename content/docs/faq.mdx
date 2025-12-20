@@ -1,0 +1,21 @@
+---
+title: Frequently Asked Questions
+---
+
+### Do we need a backend?
+
+Not always. If your app can use browser-safe session tokens, you can integrate directly.
+
+If you require stronger credential protection or complex security policies, use the hybrid “token broker” pattern.
+
+### Can we use this in a multi-tenant SaaS?
+
+Yes. Tenancy is a first-class configuration and request concept.
+
+### Can we fully customize the UI?
+
+Yes. Use headless journeys + your UI, or embed the UI layer and theme it with scoped CSS variables.
+
+### Can we instrument and monitor integrations?
+
+Yes. Correlation IDs, hooks, and a stable error taxonomy are designed specifically for production observability.

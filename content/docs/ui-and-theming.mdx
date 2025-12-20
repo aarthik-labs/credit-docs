@@ -1,0 +1,55 @@
+---
+title: UI and Theming
+description: Learn about UI and theming in your app.
+---
+
+## UI integration and white-label theming (React)
+
+> This section describes the intended UI integration approach. The UI layer is optional; you can remain fully headless.
+
+### Design principles
+
+* **Theme via CSS variables** (semantic tokens like `--background`, `--primary`, etc.)
+* **Container-scoped styling**
+
+  * SDK UI styles apply inside a dedicated container
+  * avoids collisions with your host app’s global styles
+* **Dark mode scoped to container**
+
+  * SDK can apply a `dark` class to its own container
+  * no requirement to modify `<html>` in the host app
+
+### Conceptual usage (draft)
+
+```tsx
+import {
+  CreditProvider,
+  CreditJourney,
+  type ThemeTokens,
+} from "@aarthiklabs/credit-sdk/components";
+
+const tokens: ThemeTokens = {
+  "--background": "oklch(1 0 0)",
+  "--foreground": "oklch(0.145 0 0)",
+  "--primary": "oklch(0.205 0 0)",
+  "--primary-foreground": "oklch(0.985 0 0)",
+};
+
+export function CreditEntry() {
+  return (
+    <CreditProvider
+      client={credit}
+      tenantID="tenant_acme"
+      theme={{ tokens, mode: "light" }}
+    >
+      <CreditJourney />
+    </CreditProvider>
+  );
+}
+```
+
+### What you control (white-label)
+
+* token values (colors, radius, etc.)
+* mode: `light | dark | system`
+* the container placement (inline, modal, route page, embedded card)

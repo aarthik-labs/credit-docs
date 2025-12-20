@@ -1,0 +1,28 @@
+---
+title: Credit Journeys
+description: Learn about credit journeys in your app.
+---
+
+This is the part that typically determines whether an integration stays clean at scale.
+
+A **journey** is the SDK’s orchestration unit for end-to-end credit flows. It’s designed so that your app can:
+
+* start a journey (new user session)
+* display the right screen at the right time
+* submit user input safely (idempotency + retries)
+* handle asynchronous updates without fragile glue code
+* resume progress after refresh/restart
+
+## Journey lifecycle (what your users experience)
+
+A typical journey looks like:
+
+1. **Start** the flow from your product context (e.g., “Apply for credit”)
+2. **Discover** available options (offer discovery)
+3. **Select** a preferred option
+4. **Provide details** (forms / consents / uploads, as required)
+5. **Submit** and wait for asynchronous processing
+6. **Track** progress and outcomes
+7. **Complete** (success) or **end** (decline/cancel)
+
+The SDK turns this into a clean integration surface: your UI reacts to a single state stream, instead of juggling multiple independent network calls and partial flags.

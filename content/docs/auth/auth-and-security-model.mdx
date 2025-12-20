@@ -1,0 +1,26 @@
+---
+title: Auth and Security Model
+description: Learn about the authentication and security model in your app.
+---
+
+## Auth and security model
+
+### Security baseline: keep secrets off the client
+
+* Browser and mobile apps should use **short-lived / session tokens**.
+* Any long-lived credentials or signing keys should live in your backend.
+
+### Hybrid “token broker” architecture (optional)
+
+```mermaid
+flowchart LR
+  UI[Web / Mobile App] --> SDKC[Credit SDK (Client)]
+  UI --> BFF[Your Backend (Token Broker / BFF)]
+  BFF --> SDKS[Credit SDK (Server)]
+  SDKC --> Platform[Credit Platform]
+  SDKS --> Platform
+```
+
+* **Client SDK:** uses session/public tokens via `auth.getToken()`
+* **Server SDK (optional):** performs sensitive operations or credential exchange
+* This keeps your security posture clean while preserving fast UX.

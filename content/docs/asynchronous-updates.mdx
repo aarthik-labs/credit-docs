@@ -1,0 +1,46 @@
+---
+title: Asynchronous Updates
+description: Learn how to handle asynchronous updates in your app.
+---
+
+## Asynchronous updates: how the journey keeps moving
+
+Most credit workflows cannot complete within one synchronous request.
+
+The SDK is designed to support multiple update channels and normalize them into the same journey events:
+
+* polling (periodic status checks)
+* push updates (SSE/WebSocket) where applicable
+* backend callbacks routed through your infrastructure (hybrid model)
+
+### High-level sequence (illustrative)
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant UI as Your App UI
+  participant J as Journey Runtime (SDK)
+  participant P as Credit Platform
+
+  UI->>J: START
+  J->>P: Discover options (tenant+auth+correlation)
+  P-->>J: Options ready
+  J-->>UI: State: reviewingOffers
+
+  UI->>J: SELECT_OFFER
+  J-->>UI: State: collectingDetails
+
+  UI->>J: SUBMIT_DETAILS
+  J->>P: Submit (idempotency-key)
+  P-->>J: Accepted/received
+  J-->>UI: State: awaitingUpdates
+
+  P-->>J: Async update (approved/rejected/actionRequired)
+  J-->>UI: State change + payload normalized
+```
+
+**What this “sells” in production terms:**
+
+* Your UI never “guesses” what to do next.
+* Your app gets a single stream of truth: **current state + next expected actions**.
+* Async updates are not special-case code paths; they are first-class.

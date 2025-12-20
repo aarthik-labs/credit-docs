@@ -1,0 +1,55 @@
+---
+title: Quick-Start
+description: Learn how to get started with your app.
+---
+
+## Quickstart
+
+### Install
+
+```bash
+npm i @aarthiklabs/credit-sdk
+# or
+pnpm add @aarthiklabs/credit-sdk
+# or
+yarn add @aarthiklabs/credit-sdk
+```
+
+### Create a client instance
+
+The SDK uses **options-object configuration** (stable DX; avoids positional-argument errors).
+
+```ts
+import { createCreditClient } from "@aarthiklabs/credit-sdk";
+
+const credit = createCreditClient({
+  baseURL: "https://YOUR_BASE_URL",
+
+  tenant: {
+    defaultTenantID: "tenant_acme",
+    // headerName defaults to "x-tenant-id"
+  },
+
+  auth: {
+    // Recommended for browser: rotate token via getter
+    getToken: async () => localStorage.getItem("credit_access_token"),
+    // headerName defaults to "authorization"
+    // scheme defaults to "Bearer"
+  },
+
+  retry: {
+    maxAttempts: 2, // total attempts including the first attempt
+  },
+
+  hooks: {
+    beforeRequest: async ({ method, URL, correlationID, tenantID }) => {
+      console.log("[credit-sdk] →", method, URL, { correlationID, tenantID });
+    },
+    afterResponse: async ({ method, URL, durationMs, correlationID }) => {
+      console.log("[credit-sdk] ←", method, URL, { durationMs, correlationID });
+    },
+  },
+});
+```
+
+> **Draft note:** `createCreditClient()` is the intended public entrypoint for integrators. The underlying core transport behaviors (timeouts, retries, headers, correlation IDs, abort support) are already implemented; domain namespaces and UI components are added incrementally.

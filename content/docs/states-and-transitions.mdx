@@ -1,0 +1,66 @@
+---
+title: States and Transitions
+description: Learn about states and transitions in your app.
+---
+
+## Journey states and transitions (illustrative)
+
+> The exact state names and screens may evolve, but the structure is stable: **user actions and platform updates cause a journey to advance**.
+
+```mermaid
+stateDiagram-v2
+  direction LR
+
+  [*] --> idle
+
+  idle --> discovering: START
+  discovering --> reviewingOffers: OFFERS_READY
+  discovering --> recoverableError: NETWORK_ERROR / RETRYABLE
+  discovering --> terminalError: CONFIG_ERROR / FATAL
+
+  reviewingOffers --> collectingDetails: SELECT_OFFER
+  reviewingOffers --> idle: EXIT
+
+  collectingDetails --> validating: SUBMIT_DETAILS
+  validating --> collectingDetails: VALIDATION_ISSUES
+  validating --> submitting: VALIDATION_OK
+  collectingDetails --> idle: EXIT
+
+  submitting --> awaitingUpdates: SUBMITTED
+  submitting --> recoverableError: HTTP_ERROR / RETRYABLE
+  submitting --> terminalError: HTTP_ERROR / NON_RETRYABLE
+
+  awaitingUpdates --> actionRequired: ACTION_REQUIRED
+  awaitingUpdates --> approved: APPROVED
+  awaitingUpdates --> rejected: REJECTED
+  awaitingUpdates --> terminalError: TIMEOUT_EXCEEDED
+
+  actionRequired --> collectingDetails: PROVIDE_ADDITIONAL_INFO
+  actionRequired --> awaitingUpdates: RESUBMITTED
+  actionRequired --> idle: EXIT
+
+  approved --> completed: ACCEPT_AND_FINISH
+  approved --> idle: EXIT
+
+  rejected --> completed: ACKNOWLEDGE
+  rejected --> idle: EXIT
+
+  recoverableError --> discovering: RETRY
+  recoverableError --> idle: EXIT
+
+  terminalError --> completed: ACKNOWLEDGE
+  completed --> idle: CLOSE
+```
+
+### How to read this (non-technical version)
+
+* The user **sees screens** that match the current state (offers, forms, progress, result)
+* The journey advances when:
+
+  * the user takes an action (select, submit, retry, exit), or
+  * the platform sends updates (approved, rejected, action required)
+* The SDK provides consistent handling for:
+
+  * temporary failures (recoverable)
+  * permanent failures (terminal)
+  * leaving and resuming later

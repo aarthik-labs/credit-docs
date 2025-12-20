@@ -1,0 +1,27 @@
+---
+title: Extensibility
+description: explore the plugin-based extension system
+---
+
+The client is designed to be extended without forking.
+
+Typical use cases:
+
+* custom analytics
+* custom storage/persistence
+* custom logging/observability
+* organization-specific helpers
+
+Illustrative pattern:
+
+```ts
+const withAnalytics = () => (client) => ({
+  analytics: {
+    track: (name: string, payload?: unknown) => {
+      client.config.logger?.information?.("[analytics]", name, payload);
+    },
+  },
+});
+
+const creditWithAnalytics = credit.extend(withAnalytics());
+```

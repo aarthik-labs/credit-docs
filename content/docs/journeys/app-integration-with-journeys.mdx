@@ -1,0 +1,42 @@
+---
+title: App Integration with Journeys
+description: Learn how to integrate your app with Journeys.
+---
+
+## How your app integrates with journeys (two modes)
+
+### Mode A: UI kit renders screens (fastest)
+
+Your app embeds a single component; SDK handles screen selection and transitions.
+
+```tsx
+<CreditProvider client={credit} tenantID="tenant_acme">
+  <CreditJourney />
+</CreditProvider>
+```
+
+**Best for:** fastest go-to-market, consistent UX patterns, minimal custom UI.
+
+---
+
+### Mode B: headless journey + your UI (max customization)
+
+Your app controls rendering; the SDK gives you a journey handle and state updates.
+
+```ts
+// Draft API sketch (shape may evolve)
+const journey = await credit.journeys.start({
+  tenantID: "tenant_acme",
+  // optional: initial user context or prefilled inputs
+});
+
+// Subscribe to state updates and render your own UI
+journey.subscribe((snapshot) => {
+  console.log("Journey state:", snapshot.state, snapshot.correlationID);
+});
+
+// User selects an offer
+journey.send({ type: "SELECT_OFFER", offerID: "offer_123" });
+```
+
+**Best for:** full UI control, existing design systems, custom funnels.
