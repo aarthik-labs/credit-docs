@@ -1,0 +1,91 @@
+---
+title: Authentication & Tokens
+description: SECRET_KEY (server) + Bootstrap Token (client) + internal access/refresh.
+---
+
+## The security model (read this once, save yourself pain)
+
+<Callout type="warning" title="Rule #1: SECRET_KEY is server-only">
+The tenant SECRET_KEY must never be used in:
+- frontend code
+- mobile apps
+- browser network calls
+- public repositories
+</Callout>
+
+Your integration should always follow:
+
+1) **Backend authenticates with SECRET_KEY**  
+2) Backend mints a **Bootstrap Token** scoped to (tenant + application + borrower + journey)  
+3) Frontend passes **Bootstrap Token** to the SDK UI  
+4) The embedded checkout (iframe) handles all access/refresh mechanics internally
+
+## Tokens: what they are and who holds them
+
+### SECRET_KEY (API Key)
+**Who holds it:** your backend  
+**Purpose:** authenticate your system as an onboarded tenant  
+**Lifetime:** long-lived (rotate periodically)
+
+### Bootstrap Token
+**Who holds it:** tenant frontend briefly (memory) → SDK → iframe  
+**Purpose:** start or resume an embedded checkout session securely  
+**Lifetime:** short-lived and one-time use
+
+### Access Token
+**Who holds it:** the embedded checkout (inside the iframe)  
+**Purpose:** call Credit APIs during the journey  
+**Lifetime:** short-lived
+
+### Refresh Token
+**Who holds it:** the embedded checkout (inside the iframe)  
+**Purpose:** mint new access tokens without user friction  
+**Lifetime:** longer-lived, rotated
+
+<Callout type="info" title="Why journeys can last days without long-lived browser tokens">
+The *Journey* is a server-side construct and can last for days.
+Tokens are short-lived credentials that can be re-issued safely as needed.
+To resume a journey, you mint a new Bootstrap Token for the same journey scope.
+</Callout>
+
+## Practical lifecycle guidance
+
+### A borrower may return tomorrow
+No problem:
+
+- Your backend mints a new Bootstrap Token
+- The SDK opens the same journey
+- The embedded checkout resumes from server state
+
+### You should store journey references server-side
+Recommended:
+
+- Store `{ borrowerReference, journeyReference }` (or IDs) in your DB
+- On “resume”, mint a fresh Bootstrap Token
+- Avoid keeping these identifiers in localStorage if you don’t need to
+
+## Passing the SECRET_KEY
+
+Most integrations standardize on one of these:
+
+- `Authorization: Bearer <SECRET_KEY>`
+- `X-API-Key: <SECRET_KEY>`
+
+Use whichever your dashboard/API reference specifies.
+
+## Environment separation
+
+You should have separate credentials and allowlists for:
+
+- Test / Non-production
+- Production
+
+This prevents accidental production traffic during development.
+
+## Rotation & compromise handling
+
+Production recommendations:
+
+- Rotate SECRET_KEY on a schedule (e.g., quarterly) and immediately on suspicion.
+- Support multiple active keys during rotation windows.
+- Log token mint requests with correlation IDs (but never log the token itself).

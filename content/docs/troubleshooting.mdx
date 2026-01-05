@@ -1,0 +1,55 @@
+---
+title: Troubleshooting
+description: Common integration failures and how to fix them fast.
+---
+
+## The modal/drawer doesn’t open
+
+**Likely cause:** rendering the SDK in a Server Component (Next.js App Router).
+
+✅ Fix:
+- Move the SDK usage into a `"use client"` component.
+
+## The UI looks unstyled / broken
+
+**Likely causes:**
+- Your app is missing shadcn/tailwind base styles (if the SDK depends on them)
+- CSS variables like `--background` aren’t defined
+
+✅ Fix:
+- Ensure your design system variables exist
+- See [Theming & White-label](./theming)
+
+## The iframe is blank
+
+**Likely causes:**
+- CSP blocks `frame-src`
+- Origin not allowlisted
+- Token is missing/expired
+
+✅ Fix:
+- Update CSP
+- Check your dashboard allowlist
+- Mint a fresh Bootstrap Token and retry
+
+## Token mint endpoint returns 401/403
+
+**Likely causes:**
+- Wrong environment key (test vs production)
+- Key revoked or rotated
+- Using key in the wrong header format
+
+✅ Fix:
+- Verify environment selection
+- Ensure `Authorization: Bearer <SECRET_KEY>` (or the expected header)
+- Rotate keys if compromised
+
+## “Works on desktop but not on mobile”
+
+**Likely causes:**
+- WebView/Browser iframe limitations
+- Fullscreen behavior not configured
+
+✅ Fix:
+- Use `fullscreen="mobile-only"`
+- Test on Safari iOS and Android Chrome early

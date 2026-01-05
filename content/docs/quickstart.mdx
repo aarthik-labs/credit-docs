@@ -1,0 +1,142 @@
+---
+title: Quickstart
+description: End-to-end embed in React + a secure server-side bootstrap token mint.
+---
+
+## 1) Install
+
+```npm
+npm i @aarthiklabs/credit-sdk
+````
+
+```npm
+pnpm add @aarthiklabs/credit-sdk
+```
+
+```npm
+yarn add @aarthiklabs/credit-sdk
+```
+
+## 2) Get your keys
+
+From the dashboard, you’ll create:
+
+* An **Application** (for environment + allowlist + webhooks + theming)
+* A **SECRET_KEY** (server-only)
+
+<Callout type="warning" title="Never expose the SECRET_KEY in the browser">
+If the SECRET_KEY appears in your frontend bundle, your integration is compromised.
+Always mint Bootstrap Tokens from your backend.
+</Callout>
+
+## 3) Mint a Bootstrap Token from your backend
+
+Your backend should expose a minimal endpoint like:
+
+* `POST /api/credit/bootstrap-token`
+
+This endpoint:
+
+1. Validates the borrower identity (your auth)
+2. Calls Aarthik’s Bootstrap Token API using the SECRET_KEY (server-to-server)
+3. Returns `{ bootstrap_token }` to the frontend
+
+### Example: Next.js App Router Route Handler
+
+Create:
+
+`app/api/credit/bootstrap-token/route.ts`
+
+```ts
+import { NextResponse } from "next/server";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
+
+    // 1) Validate input (keep it strict)
+    // You control what you send — avoid PII if not required.
+    const borrowerReference = body?.borrowerReference;
+    if (!borrowerReference || typeof borrowerReference !== "string") {
+      return NextResponse.json({ error: "Invalid borrowerReference" }, { status: 400 });
+    }
+
+    // 2) Server-to-server: call Aarthik Credit API using SECRET_KEY
+    const baseUrl = process.env.AARTHIK_CREDIT_API_BASE_URL;
+    const secretKey = process.env.AARTHIK_CREDIT_SECRET_KEY;
+
+    if (!baseUrl || !secretKey) {
+      return NextResponse.json(
+        { error: "Missing server configuration" },
+        { status: 500 }
+      );
+    }
+
+    // NOTE: The exact endpoint path is intentionally omitted from SDK docs.
+    // Use the dashboard-provided API reference for the correct URL.
+    const res = await fetch(`${baseUrl}/<BOOTSTRAP_TOKEN_ENDPOINT>`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        // Either of these are commonly supported:
+        "Authorization": `Bearer ${secretKey}`,
+        // "X-API-Key": secretKey,
+      },
+      body: JSON.stringify({
+        borrowerReference,
+        // optionally: journeyReference, returnUrl, metadata, etc.
+      }),
+    });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      return NextResponse.json(
+        { error: "Failed to mint bootstrap token", details: text },
+        { status: 502 }
+      );
+    }
+
+    const data = await res.json();
+
+    // Expect shape: { bootstrap_token: string, ... }
+    if (!data?.bootstrap_token || typeof data.bootstrap_token !== "string") {
+      return NextResponse.json(
+        { error: "Invalid token response shape" },
+        { status: 502 }
+      );
+    }
+
+    return NextResponse.json(
+      { bootstrap_token: data.bootstrap_token },
+      { status: 200, headers: { "Cache-Control": "no-store" } }
+    );
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Unknown error" },
+      { status: 500 }
+    );
+  }
+}
+```
+
+<Callout type="info" title="Why the endpoint path is hidden here">
+This page is **SDK integration documentation**. It intentionally avoids publishing internal/public API surface details.
+Your dashboard/API reference can expose the exact paths privately (or behind auth).
+</Callout>
+
+## 4) Frontend: open the embedded checkout
+
+You’ll typically:
+
+1. User clicks “Apply for a loan”
+2. Your frontend calls your backend (`/api/credit/bootstrap-token`)
+3. You pass the `bootstrap_token` into the SDK component and open it
+
+A simple pattern is to fetch the token on click and store it in state.
+
+You’ll see concrete React examples in the next page:
+
+* [React Integration](./react)

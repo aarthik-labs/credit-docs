@@ -1,0 +1,92 @@
+---
+title: Theming & White-label
+description: Theme the overlay safely using shadcn CSS variables without global collisions.
+---
+
+## Goal
+
+You want the embedded checkout to feel like it belongs inside your product.
+
+This SDK uses the **shadcn CSS variable token model**, meaning the UI colors/typography can be themed by changing CSS variables like:
+
+- `--background`, `--foreground`
+- `--primary`, `--primary-foreground`
+- `--radius`, etc.
+
+## Two theming layers
+
+### 1) Outer shell (Dialog/Drawer)
+Rendered in the host app. This is what you can theme via your app’s CSS variables.
+
+### 2) Embedded checkout (iframe)
+Rendered on our domain. This is themed using a controlled theme protocol (delivered by the platform).  
+You don’t theme iframe internals by CSS leakage (that’s blocked by the browser). You theme via configuration.
+
+## Recommended approach: container-scoped theming
+
+You should avoid mutating `<html>` or `<body>` in the host app for SDK theming.
+
+Instead, apply tokens on a scoped container used by the SDK shell.
+
+```css
+/* Example: tenant-scoped theme tokens */
+.aarthik-credit {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+
+  --radius: 0.45rem;
+}
+
+/* Dark mode scoped to this container */
+.aarthik-credit.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+
+  --primary: oklch(0.87 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+}
+````
+
+Then:
+
+```tsx
+<div className="aarthik-credit">
+  <AarthikShell title="Credit Checkout" triggerProperties={{ label: "Apply" }} />
+</div>
+```
+
+<Callout type="warn" title="Portals & scoping">
+If the SDK renders the Dialog/Drawer via a portal to `document.body`, your scoped container variables won’t apply unless the SDK portals into a container it controls.
+For production-grade white-labeling, ensure the SDK mounts its own container element (e.g., `#aarthik-credit-root`) and portals the overlay there.
+</Callout>
+
+## Dark mode
+
+You should support:
+
+* `light`
+* `dark`
+* `system`
+
+A clean strategy is:
+
+* host app decides mode
+* host app toggles `.dark` class on the SDK container (not on `<html>`)
+
+## Embedded checkout theme
+
+The iframe-based checkout should accept a theme reference:
+
+* `theme_id` (recommended) — managed in dashboard, versioned, audited
+* or a signed theme payload (advanced)
+
+This keeps white-labeling secure and predictable.
+
+## Best practices
+
+* Keep token values valid CSS (sanitise inputs if tenant-configurable)
+* Prefer semantic tokens (`--background`) over raw palette classes
+* Version themes and allow rollback

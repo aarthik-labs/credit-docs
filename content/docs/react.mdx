@@ -1,0 +1,131 @@
+---
+title: React Integration
+description: Embed the checkout dialog/drawer and pass a bootstrap token securely.
+---
+
+## The component you render
+
+The Credit SDK is designed to be used as a **UI shell** that opens an overlay and loads the journey in an iframe.
+
+### ✅ Recommended usage shape
+
+You should expect a component interface like:
+
+- A **trigger** in your UI (button, link, etc.)
+- A **Bootstrap Token** passed to the SDK
+- Optional UI config (title, fullscreen behavior)
+
+## Next.js note (App Router)
+
+If you’re on Next.js App Router, the component must be rendered in a **client component**.
+
+```tsx
+"use client";
+````
+
+If you render it in a Server Component, it will either not work or break due to `window`/media queries.
+
+## Example: “Apply for loan” button that opens embedded checkout
+
+```tsx
+"use client";
+
+import { useState } from "react";
+import { AarthikShell } from "@aarthiklabs/credit-sdk";
+
+export function ApplyForLoan() {
+  const [bootstrapToken, setBootstrapToken] = useState<string | null>(null);
+
+  async function onClick() {
+    // Fetch bootstrap token from YOUR backend
+    const res = await fetch("/api/credit/bootstrap-token", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ borrowerReference: "borrower_123" }),
+    });
+
+    const data = await res.json();
+    setBootstrapToken(data.bootstrap_token);
+  }
+
+  return (
+    <AarthikShell
+      title="Apply for a loan"
+      fullscreen="mobile-only"
+      triggerProperties={{
+        label: "Apply for a loan",
+        // In many integrations you'll fetch the token first:
+        // If you want token minted BEFORE open, do it in a custom trigger.
+      }}
+      // In production, you should pass bootstrapToken into the SDK so the iframe
+      // can load the correct journey context.
+      // bootstrapToken={bootstrapToken}
+    />
+  );
+}
+```
+
+<Callout type="warn" title="This example assumes a token-capable embed">
+If your current build doesn’t yet accept a `bootstrapToken` prop, add it — it’s the cleanest contract.
+The token should be consumed by the SDK to build the iframe URL or securely message it into the iframe.
+</Callout>
+
+## Trigger customization
+
+The SDK supports either:
+
+* `triggerProperties.label` (simple)
+* `triggerProperties.component` (custom JSX)
+
+Example:
+
+```tsx
+<AarthikShell
+  title="Credit Checkout"
+  triggerProperties={{
+    component: (
+      <button className="px-4 py-2 rounded-md border">
+        Apply Now
+      </button>
+    ),
+  }}
+/>
+```
+
+## Fullscreen behavior
+
+Fullscreen lets you mimic the Razorpay feel:
+
+* “Normal” modal on desktop
+* “App-like full screen” on mobile
+
+Typical options:
+
+* `all`
+* `mobile-only`
+* `desktop-only`
+* `none`
+
+Example:
+
+```tsx
+<AarthikShell
+  title="Credit Checkout"
+  fullscreen="mobile-only"
+  triggerProperties={{ label: "Apply" }}
+/>
+```
+
+## UX guidance (production)
+
+* **Mint token only when needed** (just-in-time) to avoid expiry.
+* If token mint fails, show a user-safe retry state.
+* For a returning borrower, mint a new Bootstrap Token and let them resume the same Journey.
+
+## Styling expectations
+
+The SDK overlay uses shadcn-style primitives (Dialog/Drawer/Button). If you’re already using shadcn, you’ll feel right at home.
+
+If you need to white-label the overlay:
+
+* See [Theming & White-label](./theming)

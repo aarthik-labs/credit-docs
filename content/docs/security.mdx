@@ -1,0 +1,65 @@
+---
+title: Security Checklist
+description: Production-grade embedding (CSP, origin allowlists, and secret handling).
+---
+
+## Do not leak secrets
+
+<Callout type="error" title="Never do this">
+  - Put SECRET_KEY in `.env` that gets shipped to the browser - Call token mint
+  endpoints directly from the browser using SECRET_KEY - Log tokens in your
+  server logs
+</Callout>
+
+## CSP (Content Security Policy)
+
+If your app uses CSP, you must allow:
+
+- iframe embedding of the checkout domain (`frame-src`)
+- network calls used by your frontend (`connect-src`) if needed
+
+Example shape:
+
+```txt
+Content-Security-Policy:
+  frame-src https://<YOUR_CHECKOUT_DOMAIN>;
+  connect-src 'self' https://<YOUR_BACKEND_DOMAIN>;
+```
+
+Exact domains depend on your environment and dashboard config.
+
+## Allowed origins / embedding allowlist
+
+Production-grade iframe systems should enforce:
+
+- Only approved origins can embed the checkout
+- Tokens minted for one application should not work on unknown origins
+
+Make sure your dashboard has:
+
+- Staging origin allowlist
+- Production origin allowlist
+
+## Token transport rules
+
+- Bootstrap Token can be sent to the browser but should be treated like a password:
+  - Keep it in memory (state), not localStorage
+  - Mint it just-in-time
+
+- Access/Refresh tokens should remain inside the iframe application storage boundary.
+
+## Browser and mobile WebViews
+
+If you embed inside a mobile WebView:
+
+- Ensure iframes are allowed
+- Ensure third-party cookie restrictions don’t break auth (prefer token-in-header flows inside iframe)
+- Use your allowlist to restrict embedding origins
+
+## Operational monitoring
+
+For production:
+
+- Log token mint events with correlation IDs
+- Rate-limit token mint endpoint (per borrower/user)
+- Detect anomaly patterns (token mint storms, excessive failures, suspicious origins)

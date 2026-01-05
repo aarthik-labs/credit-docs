@@ -1,21 +1,40 @@
 ---
-title: Frequently Asked Questions
+title: FAQ
+description: Practical integration questions.
 ---
 
-### Do we need a backend?
+## Do I need to build any loan journey UI myself?
 
-Not always. If your app can use browser-safe session tokens, you can integrate directly.
+No. The whole point is: you embed the journey as a hosted UI inside an iframe.
 
-If you require stronger credential protection or complex security policies, use the hybrid “token broker” pattern.
+## Why do you use an iframe?
 
-### Can we use this in a multi-tenant SaaS?
+Security + isolation + speed:
 
-Yes. Tenancy is a first-class configuration and request concept.
+- isolates sensitive flows from the host app
+- keeps forms/KYC flows consistent across tenants
+- lets you ship updates without tenant redeploys
 
-### Can we fully customize the UI?
+## Does the borrower leave my site?
 
-Yes. Use headless journeys + your UI, or embed the UI layer and theme it with scoped CSS variables.
+No. The journey runs inside your site, inside an overlay.
 
-### Can we instrument and monitor integrations?
+## My loan journey lasts days. How does auth work?
 
-Yes. Correlation IDs, hooks, and a stable error taxonomy are designed specifically for production observability.
+Journeys last days. Tokens do not.
+
+- Tokens are short-lived credentials.
+- To resume, mint a new Bootstrap Token for the same journey scope.
+
+## Can I customize the button / trigger?
+
+Yes. Use a custom component trigger in `triggerProperties.component`.
+
+## Can I white-label it?
+
+Yes. The shell can inherit host theme via shadcn tokens, and the embedded checkout supports controlled theming via platform configuration.
+
+## Do I ever need access/refresh tokens in my app?
+
+No. Those should remain inside the iframe boundary.
+Your app should rely on server-side state + webhooks (if enabled) for long-running status.
