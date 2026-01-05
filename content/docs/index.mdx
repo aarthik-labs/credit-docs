@@ -1,10 +1,10 @@
 ---
 title: Credit SDK
-description: Embed a complete loan journey inside your app (Stripe Checkout-style).
+description: Embed a complete loan journey inside your app.
 ---
 
 <Callout type="info" title="What this is">
-The Credit SDK lets you embed a **full loan application journey** inside a **secure iframe** wrapped in a **Dialog (desktop) / Drawer (mobile)** overlay — similar to Razorpay/Stripe Checkout.
+The Credit SDK lets you embed a **full loan application journey** inside a **secure iframe** wrapped in a **Dialog (desktop) / Drawer (mobile)** overlay.
 </Callout>
 
 ## What you get
@@ -22,9 +22,9 @@ When you use the Credit SDK, you get:
 sequenceDiagram
   participant TenantFE as Tenant Frontend
   participant TenantBE as Tenant Backend
-  participant CreditAPI as Aarthik Credit API
-  participant SDK as Credit SDK (Dialog/Drawer)
-  participant IFrame as Embedded Checkout (iframe)
+  participant CreditAPI as AL Initiate API
+  participant SDK as AL SDK (Dialog/Drawer)
+  participant IFrame as AL SDK Journey
 
   TenantFE->>TenantBE: Request bootstrap token (borrower + journey scope)
   TenantBE->>CreditAPI: Authenticate with SECRET_KEY (server-only)
