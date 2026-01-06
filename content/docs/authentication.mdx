@@ -1,12 +1,12 @@
 ---
 title: Authentication & Tokens
-description: SECRET_KEY (server) + Bootstrap Token (client) + internal access/refresh.
+description: API_KEY (server) + Bootstrap Token (client) + internal access/refresh.
 ---
 
 ## The security model (read this once, save yourself pain)
 
-<Callout type="warning" title="Rule #1: SECRET_KEY is server-only">
-The tenant SECRET_KEY must never be used in:
+<Callout type="warning" title="Rule #1: API_KEY is server-only">
+The tenant API_KEY must never be used in:
 - frontend code
 - mobile apps
 - browser network calls
@@ -15,14 +15,14 @@ The tenant SECRET_KEY must never be used in:
 
 Your integration should always follow:
 
-1) **Backend authenticates with SECRET_KEY**  
+1) **Backend authenticates with API_KEY**  
 2) Backend mints a **Bootstrap Token** scoped to (tenant + application + borrower + journey)  
 3) Frontend passes **Bootstrap Token** to the SDK UI  
 4) The embedded checkout (iframe) handles all access/refresh mechanics internally
 
 ## Tokens: what they are and who holds them
 
-### SECRET_KEY (API Key)
+### API_KEY (API Key)
 **Who holds it:** your backend  
 **Purpose:** authenticate your system as an onboarded tenant  
 **Lifetime:** long-lived (rotate periodically)
@@ -64,12 +64,12 @@ Recommended:
 - On “resume”, mint a fresh Bootstrap Token
 - Avoid keeping these identifiers in localStorage if you don’t need to
 
-## Passing the SECRET_KEY
+## Passing the API_KEY
 
 Most integrations standardize on one of these:
 
-- `Authorization: Bearer <SECRET_KEY>`
-- `X-API-Key: <SECRET_KEY>`
+- `Authorization: Bearer <API_KEY>`
+- `X-API-Key: <API_KEY>`
 
 Use whichever your dashboard/API reference specifies.
 
@@ -86,6 +86,6 @@ This prevents accidental production traffic during development.
 
 Production recommendations:
 
-- Rotate SECRET_KEY on a schedule (e.g., quarterly) and immediately on suspicion.
+- Rotate API_KEY on a schedule (e.g., quarterly) and immediately on suspicion.
 - Support multiple active keys during rotation windows.
 - Log token mint requests with correlation IDs (but never log the token itself).

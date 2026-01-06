@@ -4,16 +4,54 @@ description: Embed a complete loan journey inside your app.
 ---
 
 <Callout type="info" title="What this is">
-The Credit SDK lets you embed a **full loan application journey** inside a **secure iframe** wrapped in a **Dialog (desktop) / Drawer (mobile)** overlay.
+The Credit SDK enables partners to embed a full loan application flow within their web or mobile application using a secure **iframe / webview**, rendered as a **Dialog** (desktop) or **Drawer** (mobile).
 </Callout>
 
-## What you get
+The embedded journey is fully managed by **Aarthik Labs** and runs seamlessly within the partner’s application context.
 
-When you use the Credit SDK, you get:
+## What the SDK Provides
 
-- A **drop-in UI** for a borrower to discover offers, complete KYC/consents, and progress through the loan journey.
-- A **single integration surface**: your backend mints a **Bootstrap Token**, your frontend passes it to the SDK UI.
-- **No loan-journey UI build on your side** (you don’t build forms, validations, KYC screens, etc.).
+### 1. End-to-End Borrower Journey UI
+
+Includes:
+
+- Profile and basic details capture  
+- Offer discovery and selection  
+- Consent capture (data, KYC, lender, etc.)  
+- Loan application progression and real-time status updates  
+
+---
+
+### 2. Single Integration Surface
+
+- Partner backend generates a **short-lived Auth Token**  
+- Partner frontend passes this token to the SDK to initialize the journey  
+
+---
+
+### 3. Zero UI and Journey Build on the Partner Side
+
+Partners **do not** build or maintain:
+
+- Forms and validations  
+- KYC, mandate, and document upload screens  
+- Consent flows and regulatory disclosures  
+- Application status and error-handling screens  
+- ONDC integrations  
+- Lender-specific integrations  
+- Protocol version upgrades and journey changes  
+
+All journey orchestration, lender routing, protocol handling, and regulatory compliance are fully managed within the SDK.
+
+---
+
+## High-Level Flow
+
+- Partner backend requests an **Auth Token** from Aarthik Labs Initiate APIs  
+- Partner frontend initializes the Credit SDK using the token  
+- SDK launches as an embedded **Dialog** (desktop) or **Drawer** (mobile)  
+- Borrower completes the loan journey within the partner’s website or app  
+- Real-time journey status and events are sent back to the partner via **callbacks / webhooks**
 
 ## How it works (high level)
 
@@ -27,7 +65,7 @@ sequenceDiagram
   participant IFrame as AL SDK Journey
 
   TenantFE->>TenantBE: Request bootstrap token (borrower + journey scope)
-  TenantBE->>CreditAPI: Authenticate with SECRET_KEY (server-only)
+  TenantBE->>CreditAPI: Authenticate with API_KEY (server-only)
   CreditAPI-->>TenantBE: bootstrap_token (short-lived)
   TenantBE-->>TenantFE: bootstrap_token
   TenantFE->>SDK: Render/open SDK with bootstrap_token
@@ -40,7 +78,7 @@ sequenceDiagram
 
 ### Tenant
 
-The business integrating the Credit SDK (your customer).
+The business integrating the Credit SDK.
 
 ### Application
 
@@ -56,18 +94,16 @@ A single borrower’s loan journey instance. Journeys can last **days** (e.g., s
 
 ### Tokens
 
-* **SECRET_KEY (API key)**: Long-lived credential for the tenant.
+* **API Key (`API_KEY`)**: Long-lived, secured, credentials for the tenant.
   **Server-only. Never goes to the browser.**
 * **Bootstrap Token**: Short-lived, one-time token minted by your backend for a specific borrower + journey scope.
   This is what the frontend passes to the SDK UI.
-* **Access/Refresh tokens**: Used internally by the embedded checkout (inside the iframe).
-  The host app shouldn’t touch these.
+* **Access/Refresh tokens**: Used internally by the embedded journey (inside the dialog/drawer). The host app shouldn’t touch these.
 
 ## What the SDK UI actually renders
 
-* Desktop: **modal dialog**
-* Mobile: **full-height drawer**
-* Inside: an **iframe** that runs the entire credit journey UI on our hosted domain
+* Desktop: **modal dialog** holding the embedded journey.
+* Mobile: **full-height drawer** holding the embedded journey.
 
 ## Next steps
 
@@ -79,6 +115,6 @@ A single borrower’s loan journey instance. Journeys can last **days** (e.g., s
     Drop-in component usage patterns, Next.js notes, and props.
   </Card>
   <Card href="./authentication" title="Authentication & Tokens">
-    SECRET_KEY vs bootstrap/access/refresh tokens, and how long journeys can last.
+    API_KEY vs bootstrap/access/refresh tokens, and how long journeys can last.
   </Card>
 </Cards>

@@ -22,10 +22,10 @@ yarn add @aarthiklabs/credit-sdk
 From the dashboard, you’ll create:
 
 * An **Application** (for environment + allowlist + webhooks + theming)
-* A **SECRET_KEY** (server-only)
+* A **API_KEY** (server-only)
 
-<Callout type="warning" title="Never expose the SECRET_KEY in the browser">
-If the SECRET_KEY appears in your frontend bundle, your integration is compromised.
+<Callout type="warning" title="Never expose the API_KEY in the browser">
+If the API_KEY appears in your frontend bundle, your integration is compromised.
 Always mint Bootstrap Tokens from your backend.
 </Callout>
 
@@ -38,7 +38,7 @@ Your backend should expose a minimal endpoint like:
 This endpoint:
 
 1. Validates the borrower identity (your auth)
-2. Calls Aarthik’s Bootstrap Token API using the SECRET_KEY (server-to-server)
+2. Calls Aarthik’s Bootstrap Token API using the API_KEY (server-to-server)
 3. Returns `{ bootstrap_token }` to the frontend
 
 ### Example: Next.js App Router Route Handler
@@ -64,9 +64,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid borrowerReference" }, { status: 400 });
     }
 
-    // 2) Server-to-server: call Aarthik Credit API using SECRET_KEY
+    // 2) Server-to-server: call Aarthik Credit API using API_KEY
     const baseUrl = process.env.AARTHIK_CREDIT_API_BASE_URL;
-    const secretKey = process.env.AARTHIK_CREDIT_SECRET_KEY;
+    const secretKey = process.env.AARTHIK_CREDIT_API_KEY;
 
     if (!baseUrl || !secretKey) {
       return NextResponse.json(
@@ -127,7 +127,7 @@ This page is **SDK integration documentation**. It intentionally avoids publishi
 Your dashboard/API reference can expose the exact paths privately (or behind auth).
 </Callout>
 
-## 4) Frontend: open the embedded checkout
+## 4) Frontend: open the lending journey
 
 You’ll typically:
 

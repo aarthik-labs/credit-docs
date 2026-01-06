@@ -11,13 +11,7 @@ export default function Layout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={inter.className} suppressHydrationWarning>
       <body className="flex flex-col min-h-screen">
-        <RootProvider>
-          <Banner id={"early-access"} variant={"normal"} changeLayout>
-            Early Access: Concepts and architecture are stable; some API names
-            and module boundaries may evolve.
-          </Banner>
-          {children}
-        </RootProvider>
+        <RootProvider>{children}</RootProvider>
       </body>
     </html>
   );

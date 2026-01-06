@@ -5,7 +5,9 @@
   "root": true,
   "pages": [
     "index",
+    "adoption-guide",
     "quickstart",
+    "rrmodel",
     "react",
     "authentication",
     "theming",
