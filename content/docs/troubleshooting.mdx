@@ -1,90 +1,49 @@
 ---
 title: Troubleshooting
-description: Common integration failures and how to fix them fast.
+description: Common hosted experience issues and quick fixes.
 ---
 
-## The modal/drawer doesn’t open
-
-**Likely cause:** rendering the SDK in a Server Component (Next.js App Router).
-
-✅ Fix:
-- Move the SDK usage into a `"use client"` component.
-
-## The UI looks unstyled / broken
+## Iframe is blank or blocked
 
 **Likely causes:**
-- Your app is missing shadcn/tailwind base styles (if the SDK depends on them)
-- CSS variables like `--background` aren’t defined
+- Embed domain not allow-listed in `embed_domains`
+- CSP blocks `frame-ancestors` or `frame-src`
 
 ✅ Fix:
-- Ensure your design system variables exist
-- See [Theming & White-label](./docs/theming)
+- Allow-list your domain for the application
+- Update CSP to allow the platform domain in `frame-src`
 
-## The iframe is blank
+## Backend returns 400 (Missing contactNumber)
 
-**Likely causes:**
-- CSP blocks `frame-src`
-- Origin not allowlisted
-- Token is missing/expired
+**Likely cause:** `contactNumber` is empty or malformed.
 
 ✅ Fix:
-- Update CSP
-- Check your dashboard allowlist
-- Mint a fresh Bootstrap Token and retry
+- Validate and pass a non-empty `contactNumber` (E.164 format recommended)
 
-## Token mint endpoint returns 401/403
+## Backend returns 401/403 from the platform
 
 **Likely causes:**
-- Wrong environment key (test vs production)
+- Wrong API key (test vs live)
 - Key revoked or rotated
-- Using key in the wrong header format
+- Wrong platform base URL
 
 ✅ Fix:
-- Verify environment selection
-- Ensure `Authorization: Bearer API_KEY` (or the expected header)
+- Verify `PLATFORM_API_KEY` and `PLATFORM_BASE_URL`
 - Rotate keys if compromised
 
-## 401 TOKEN_EXPIRED
+## Embed URL expires or journey does not resume
 
-**Likely cause:** access token expired.
-
-✅ Fix:
-- Call the refresh endpoint and retry the request.
-
-## 401 TOKEN_REUSED
-
-**Likely cause:** refresh token reused or session revoked.
+**Likely cause:** the `embedUrl` contains a short-lived bootstrap token.
 
 ✅ Fix:
-- Re-bootstrap and start a new session.
+- Call your backend again to mint a fresh session and render a new `embedUrl`
 
-## 403 Origin not allowed
-
-**Likely cause:** `allowed_parent_origin` does not match the allowlisted origin.
-
-✅ Fix:
-- Update the origin allowlist and ensure `allowed_parent_origin` matches exactly.
-
-## CORS errors in the browser
-
-**Likely cause:** your parent origin is not allowlisted.
-
-✅ Fix:
-- Ask Aarthik to allowlist your origin and pass the same `allowed_parent_origin` when minting bootstrap tokens.
-
-## 429 Rate limited
-
-**Likely cause:** too many requests in a short window.
-
-✅ Fix:
-- Implement backoff/retry and contact Aarthik support to adjust limits if needed.
-
-## “Works on desktop but not on mobile”
+## Camera or microphone not available
 
 **Likely causes:**
-- WebView/Browser iframe limitations
-- Fullscreen behavior not configured
+- Missing iframe permissions
+- Non-HTTPS origin
 
 ✅ Fix:
-- Use `fullscreen="mobile-only"`
-- Test on Safari iOS and Android Chrome early
+- Add `allow="camera; microphone; clipboard-read; clipboard-write"`
+- Serve the host app over HTTPS

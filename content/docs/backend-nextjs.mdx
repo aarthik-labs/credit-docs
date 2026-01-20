@@ -1,0 +1,89 @@
+---
+title: Backend (Next.js App Router)
+description: Create a server route that returns an embed URL for the hosted journey.
+---
+
+Create a server route in your app, for example:
+
+`app/api/loan-journeys/session/route.ts`
+
+```ts
+import { NextResponse } from "next/server";
+
+type TypeOfSessionRequest = {
+  contactNumber?: string | null;
+};
+
+type TypeOfPlatformSessionResponse = {
+  embedUrl: string;
+  sessionToken: string;
+  sessionExpiresAt: string;
+  bootstrapExpiresAt: string;
+  borrowerProviderID: string;
+  borrowerID: string;
+  environment: "TEST" | "LIVE";
+};
+
+export async function POST(request: Request) {
+  try {
+    const payload = (await request.json().catch(() => null)) as TypeOfSessionRequest | null;
+    const contactNumber = payload?.contactNumber?.trim();
+
+    if (!contactNumber) {
+      return NextResponse.json(
+        { error: "Missing contactNumber." },
+        { status: 400 }
+      );
+    }
+
+    const platformBaseURL = process.env.PLATFORM_BASE_URL;
+    const platformAPIKey = process.env.PLATFORM_API_KEY;
+
+    if (!platformBaseURL || !platformAPIKey) {
+      return NextResponse.json(
+        { error: "Platform configuration missing." },
+        { status: 500 }
+      );
+    }
+
+    const response = await fetch(`${platformBaseURL}/api/lab/sessions`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${platformAPIKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ contactNumber }),
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      const errorPayload = await response.json().catch(() => ({}));
+      return NextResponse.json(
+        { error: "Platform session failed.", details: errorPayload },
+        { status: response.status }
+      );
+    }
+
+    const platformSession =
+      (await response.json()) as TypeOfPlatformSessionResponse;
+
+    // Return only what the frontend needs.
+    return NextResponse.json({
+      embedUrl: platformSession.embedUrl,
+    });
+  } catch (error) {
+    return NextResponse.json({ error: "Unexpected error." }, { status: 500 });
+  }
+}
+```
+
+<Callout type="warning" title="Keep the API key on the server">
+Never expose `PLATFORM_API_KEY` to the browser. The frontend should only receive the `embedUrl`.
+</Callout>
+
+## Environment variables
+
+```bash
+PLATFORM_BASE_URL="https://your-platform-domain.com"
+PLATFORM_API_KEY="sk_live_xxx" # keep on server only
+```

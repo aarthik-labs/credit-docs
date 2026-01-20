@@ -1,19 +1,14 @@
 {
-  "title": "Credit SDK by Aarthik Labs",
-  "description": "The SDK to build for credit in India",
+  "title": "Hosted Experience by Aarthik Labs",
+  "description": "Embed a complete loan journey with a single backend call and an iframe.",
   "icon": "Building",
   "root": true,
   "pages": [
     "index",
-    "adoption-guide",
-    "quickstart",
-    "server-side-implementation",
-    "tenant-onboarding",
+    "integration-overview",
+    "backend-nextjs",
+    "frontend-nextjs",
     "rrmodel",
-    "react",
-    "authentication",
-    "theming",
-    "security",
     "troubleshooting",
     "faq"
   ]

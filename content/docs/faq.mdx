@@ -5,36 +5,34 @@ description: Practical integration questions.
 
 ## Do I need to build any loan journey UI myself?
 
-No. The whole point is: you embed the journey as a hosted UI inside an iframe.
+No. The journey is hosted and rendered inside an iframe. You only build the trigger and the container UI around it.
 
 ## Why do you use an iframe?
 
-Security + isolation + speed:
+Security, isolation, and speed:
 
 - isolates sensitive flows from the host app
-- keeps forms/KYC flows consistent across tenants
-- lets you ship updates without tenant redeploys
+- keeps journeys consistent across tenants
+- lets us ship updates without tenant redeploys
 
 ## Does the borrower leave my site?
 
-No. The journey runs inside your site, inside an overlay.
+No. The journey runs inside your app within the iframe.
 
-## My loan journey lasts days. How does auth work?
+## How does authentication work?
 
-Journeys last days. Tokens do not.
+- The API key stays on your server.
+- Your backend creates a session and returns an `embedUrl`.
+- The `embedUrl` includes a short-lived bootstrap token that the platform consumes internally.
 
-- Tokens are short-lived credentials.
-- To resume, mint a new Bootstrap Token for the same journey scope.
+## My loan journey lasts days. How do I resume it?
 
-## Can I customize the button / trigger?
+Request a fresh session from your backend and render a new `embedUrl`. The platform will continue the journey for the same borrower.
 
-Yes. Use a custom component trigger in `triggerProperties.component`.
+## Can I customize the button or entry point?
 
-## Can I white-label it?
-
-Yes. The shell can inherit host theme via shadcn tokens, and the embedded checkout supports controlled theming via platform configuration.
+Yes. You fully control the UI that triggers the session creation and renders the iframe.
 
 ## Do I ever need access/refresh tokens in my app?
 
-No. Those should remain inside the iframe boundary.
-Your app should rely on server-side state + webhooks (if enabled) for long-running status.
+No. Those tokens stay inside the iframe boundary and are managed by the platform.

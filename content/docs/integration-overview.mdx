@@ -1,0 +1,50 @@
+---
+title: Integration Overview
+description: Minimal production-grade integration for Next.js App Router.
+---
+
+This is the minimal, production-grade integration for a customer using Next.js (App Router). The API key stays on the backend, there is a single backend call to get an embed URL + bootstrap token, and the frontend only renders the iframe.
+
+## What you build
+
+### Backend (server-only): `POST /api/loan-journeys/session`
+
+- Receives `contactNumber` from the frontend.
+- Calls the platform `POST /api/lab/sessions` with `Authorization: Bearer sk_*`.
+- Returns `embedUrl` (optionally `sessionToken`, but the frontend does not need it).
+
+### Frontend (client)
+
+- Calls your backend endpoint.
+- Renders `<iframe src={embedUrl}>`.
+- The platform consumes the bootstrap token and manages session refresh internally.
+
+## Also important
+
+- Your embed domain must be allow-listed per application (`embed_domains`), or the iframe will be blocked by CSP `frame-ancestors`.
+
+## End-to-end flow
+
+<Mermaid
+  chart="
+sequenceDiagram
+  participant CustomerFE as Customer Frontend
+  participant CustomerBE as Customer Backend
+  participant Platform as Aarthik Platform
+  participant Journey as Hosted Journey (iframe)
+
+  CustomerFE->>CustomerBE: POST /api/loan-journeys/session (contactNumber)
+  CustomerBE->>Platform: POST /api/lab/sessions (Bearer sk_*)
+  Platform-->>CustomerBE: { embedUrl, sessionToken }
+  CustomerBE-->>CustomerFE: { embedUrl }
+  CustomerFE->>Journey: iframe src=embedUrl
+  Journey->>Platform: bootstrap exchange + refresh (internal)
+"
+/>
+
+## Notes for customers
+
+- Only one backend call to the platform.
+- The frontend never sees the API key.
+- The `embedUrl` includes a short-lived bootstrap token; the platform consumes it and manages refresh internally.
+- The embed domain must be allow-listed per application, or the iframe will be blocked.

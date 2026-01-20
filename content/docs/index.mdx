@@ -1,127 +1,31 @@
 ---
-title: Credit SDK
-description: Embed a complete loan journey inside your app.
+title: Hosted Experience
+description: Embed a complete loan journey with a single backend call and an iframe.
 ---
 
 <Callout type="info" title="What this is">
-The Credit SDK enables partners to embed a full loan application flow within their web or mobile application using a secure **iframe / webview**, rendered as a **Dialog** (desktop) or **Drawer** (mobile).
+The hosted experience lets you embed a full loan journey inside your app using a secure iframe. Your backend creates a session, your frontend renders the iframe, and the platform handles tokens and refresh internally.
 </Callout>
 
-The embedded journey is fully managed by **Aarthik Labs** and runs seamlessly within the partner’s application context.
+## Integration at a glance
 
-<Callout type="info" title="Need the concrete API paths?">
-See the Tenant Onboarding Guide for exact endpoint paths, payloads, and the full non-SDK flow.
+- Backend (server-only): `POST /api/loan-journeys/session` calls the platform `POST /api/lab/sessions` with `Authorization: Bearer sk_*` and returns `embedUrl`.
+- Frontend (client): calls your backend and renders `<iframe src={embedUrl}>`.
+
+<Callout type="warning" title="Allowlist required">
+Your embed domain must be allow-listed per application (`embed_domains`), or the iframe will be blocked by CSP `frame-ancestors`.
 </Callout>
-
-## What the SDK Provides
-
-### 1. End-to-End Borrower Journey UI
-
-Includes:
-
-- Profile and basic details capture  
-- Offer discovery and selection  
-- Consent capture (data, KYC, lender, etc.)  
-- Loan application progression and real-time status updates  
-
----
-
-### 2. Single Integration Surface
-
-- Partner backend generates a **short-lived Auth Token**  
-- Partner frontend passes this token to the SDK to initialize the journey  
-
----
-
-### 3. Zero UI and Journey Build on the Partner Side
-
-Partners **do not** build or maintain:
-
-- Forms and validations  
-- KYC, mandate, and document upload screens  
-- Consent flows and regulatory disclosures  
-- Application status and error-handling screens  
-- ONDC integrations  
-- Lender-specific integrations  
-- Protocol version upgrades and journey changes  
-
-All journey orchestration, lender routing, protocol handling, and regulatory compliance are fully managed within the SDK.
-
----
-
-## High-Level Flow
-
-- Partner backend requests an **Auth Token** from Aarthik Labs Initiate APIs  
-- Partner frontend initializes the Credit SDK using the token  
-- SDK launches as an embedded **Dialog** (desktop) or **Drawer** (mobile)  
-- Borrower completes the loan journey within the partner’s website or app  
-- Real-time journey status and events are sent back to the partner via **callbacks / webhooks**
-
-## How it works (high level)
-
-<Mermaid
-  chart="
-sequenceDiagram
-  participant TenantFE as Tenant Frontend
-  participant TenantBE as Tenant Backend
-  participant CreditAPI as AL Initiate API
-  participant SDK as AL SDK (Dialog/Drawer)
-  participant IFrame as AL SDK Journey
-
-  TenantFE->>TenantBE: Request bootstrap token (borrower + journey scope)
-  TenantBE->>CreditAPI: Authenticate with API_KEY (server-only)
-  CreditAPI-->>TenantBE: bootstrap_token (short-lived)
-  TenantBE-->>TenantFE: bootstrap_token
-  TenantFE->>SDK: Render/open SDK with bootstrap_token
-  SDK->>IFrame: Load embedded checkout with token
-  IFrame->>CreditAPI: Exchanges bootstrap -> access/refresh (inside iframe)
-  CreditAPI-->>IFrame: access/refresh tokens"
-/>
-
-## Key concepts
-
-### Tenant
-
-The business integrating the Credit SDK.
-
-### Application
-
-A configuration boundary for a tenant (e.g., “My Web App”, “My Android WebView”), used for scoping keys, allowlists, webhooks, theming.
-
-### Borrower
-
-The end-user applying for credit.
-
-### Journey
-
-A single borrower’s loan journey instance. Journeys can last **days** (e.g., sanction/disbursal timelines).
-
-### Tokens
-
-* **API Key (`API_KEY`)**: Long-lived, secured, credentials for the tenant.
-  **Server-only. Never goes to the browser.**
-* **Bootstrap Token**: Short-lived, one-time token minted by your backend for a specific borrower + journey scope.
-  This is what the frontend passes to the SDK UI.
-* **Access/Refresh tokens**: Used internally by the embedded journey (inside the dialog/drawer). The host app shouldn’t touch these.
-
-## What the SDK UI actually renders
-
-* Desktop: **modal dialog** holding the embedded journey.
-* Mobile: **full-height drawer** holding the embedded journey.
 
 ## Next steps
 
 <Cards>
-  <Card href="./docs/tenant-onboarding" title="Tenant Onboarding Guide">
-    Full SDK + API onboarding with concrete endpoint examples.
+  <Card href="./docs/integration-overview" title="Integration Overview">
+    The end-to-end flow and requirements.
   </Card>
-  <Card href="./docs/quickstart" title="Quickstart">
-    Get embedded checkout working end-to-end.
+  <Card href="./docs/backend-nextjs" title="Backend (Next.js App Router)">
+    A server route that returns the embed URL.
   </Card>
-  <Card href="./docs/react" title="React Integration">
-    Drop-in component usage patterns, Next.js notes, and props.
-  </Card>
-  <Card href="./docs/authentication" title="Authentication & Tokens">
-    API_KEY vs bootstrap/access/refresh tokens, and how long journeys can last.
+  <Card href="./docs/frontend-nextjs" title="Frontend (Next.js Client)">
+    A client component that renders the iframe.
   </Card>
 </Cards>
