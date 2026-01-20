@@ -8,35 +8,9 @@ We will be communicating data through webhooks, callbacks, and events in a speci
 
 ```json
 {
-  tenant_id: string; // Tenant ID shall be provided by AL
-  application_id: string; // Application ID shall be provided by AL
-  borrower: {
-    provider_id: // This should be unique per borrower (per mobile number) and needs to be provided by the Tenant every time the SDK needs to be invoked.
-    profile: {
-      Personal: {
-        panName: // (max 3 words accepted) The borrower’s full name exactly as it appears on their PAN record. *Example:* `Rahul Kumar Sharma`,
-        dob: // this needs to be a valid ISO 8601 date (Example: YYYY-MM-DDThh:mm:ss.000Z — 2026-01-01T11:59:00.018Z (timestamp is optional, a default value of 00:00:00.000 can be used.) *Example:* `1994-08-17T00:00:00.000Z`,
-        gender: // *Example:* `male`, `female` and `transgender`,
-        personalemail: // (should contain at least an "@") *Example:* `rahul.sharma@gmail.com`,
-        pan: // PAN-regex must be followed *Example:* `ABCDE1234F`,
-        contactNumber[*]: // (Mandatory field) E.164 format accepted (+91 is the only accepted country code. Post that, 10 digits accepted. Final length should be a max of 13 characters. Authenticated number should only be passed.) *Example:* `+919876543210`,
-      },
-      Work: {
-        employmentType: // The borrower’s primary mode of employment or income generation. Used to determine eligibility logic, document requirements, and lender routing (e.g. salaried vs self-employed). *Example:* `salaried`,
-        officialemail: // (should contain at least an "@", should not be a common e-mail like @gmail.com, @hotmail.com, @yahoo.com, etc.). *Example:* `rahul.sharma@acmecorp.in`,
-        income: // (should be a valid positve integer, no commas, ) The borrower’s declared or computed income, expected as a monthly amount. *Example:* `75000`,
-        companyName: // Name of the employer or business entity the borrower is associated with. *Example:* `Acme Technologies Pvt Ltd`,
-        udyamNumber: // Adhere to Udyam Number RegEx. The borrower’s Udyam Registration Number, applicable only for self-employed or MSME borrowers. *Example:* `Udyam-KA-05-0123456`,
-      },
-      Address: {
-        addressL1: // *Example:* `Flat 302, Shanti Apartments`,
-        addressL2: // *Example:* `Near MG Road Metro Station`,
-        city: // *Example:* `Rajkot`,
-        state: // *Example:* `Gujarat`,
-        pincode: // *Example:* `360001`,
-      },
-    };
-  };
+  API_KEY: string; // This will go in as a header. API Key shall be provided by Aarthik Labs.
+  contact_number?: string; // This should be provided for brand new borrowers.
+  borrower_provider_id?: string; // This should be provided in the request for existing borrowers.
 };
 ```
 
