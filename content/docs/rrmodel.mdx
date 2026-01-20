@@ -16,6 +16,44 @@ We will be communicating data through webhooks, callbacks, and events in a speci
 
 ## Response
 
+### Journey snapshots via postMessage
+
+The hosted journey posts **snapshot updates** to the parent window using `postMessage`. Each snapshot matches the response model shown below (tenant_id, application_id, borrower, journeys, etc.). You can listen for these messages, validate the origin, and forward them to your backend to store in a database or run analytics.
+
+```tsx
+"use client";
+
+import { useEffect } from "react";
+
+const PLATFORM_ORIGIN = "https://your-platform-domain.com";
+
+export function useJourneySnapshots() {
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== PLATFORM_ORIGIN) return;
+
+      const snapshot = event.data as
+        | { borrower?: { journeys?: unknown[] } }
+        | null;
+      if (!snapshot?.borrower?.journeys) return;
+
+      void fetch("/api/journey-snapshots", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(snapshot),
+      });
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
+}
+```
+
+<Callout type="warning" title="Validate origin and protect PII">
+Always validate `event.origin` to match your platform domain. These snapshots may contain sensitive borrower data, so store and process them securely.
+</Callout>
+
 ### 1. Journey Started
 
 ```json
