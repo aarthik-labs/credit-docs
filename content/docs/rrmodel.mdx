@@ -17,7 +17,18 @@ Use `application/json` with these top-level keys:
 - `workProfile` (object)
 - `address` (object)
 
-Legacy shape (`borrowerProviderID` + `contactNumber` + optional `pan`) should be treated as deprecated.
+Use the following format for a basic initialization. Every other field not shown below is optional.
+
+```json
+{
+  "borrowerProviderID": "BORROWER-123",
+  "profile": {
+    "contactNumber": "9876543210",
+  },
+}
+```
+
+If detailed borrower information is available and you wish to prefill these fields, the following extended request format is supported.
 
 ```json
 {
@@ -50,6 +61,16 @@ Legacy shape (`borrowerProviderID` + `contactNumber` + optional `pan`) should be
 ### cURL example
 
 ```bash
+curl --request POST "${PLATFORM_BASE_URL}/api/lab/sessions" \
+  --header "Authorization: Bearer ${PLATFORM_API_KEY}" \
+  --header "Content-Type: application/json" \
+  --data-raw '{
+    "borrowerProviderID": "BORROWER-123",
+    "profile": {
+      "contactNumber": "9876543210"
+    }
+  }'
+
 curl --request POST "${PLATFORM_BASE_URL}/api/lab/sessions" \
   --header "Authorization: Bearer ${PLATFORM_API_KEY}" \
   --header "Content-Type: application/json" \
