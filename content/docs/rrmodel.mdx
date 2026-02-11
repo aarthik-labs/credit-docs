@@ -58,6 +58,42 @@ If detailed borrower information is available and you wish to prefill these fiel
 }
 ```
 
+### Request Schema
+
+| Field | Type | Required | Accepted values / Notes |
+|---|---|---|---|
+| `borrowerProviderID` | `string` | Yes | Non-empty unique borrower reference from your system |
+| `profile` | `object` | Yes (with at least required fields) | Borrower profile prefill |
+| `profile.contactNumber` | `string` | Yes | Indian mobile number (10 digits, optional `+91`) |
+| `profile.pan` | `string` | No | Valid PAN (normalized to uppercase) |
+| `profile.panName` | `string` | No | PAN name |
+| `profile.dob` | `string` | No | Date string (recommended: `YYYY-MM-DD`) |
+| `profile.gender` | `string` | No | Case-insensitive: `male`, `female`, `transgender` |
+| `profile.personalemail` | `string` | No | Valid email (normalized to lowercase) |
+| `workProfile` | `object` | No | Employment prefill |
+| `workProfile.officialemail` | `string` | No | Valid email |
+| `workProfile.employmentType` | `string` | No | Case-insensitive canonical values: `salaried`, `selfEmployed`; aliases accepted: `self-employed`, `self employed` |
+| `workProfile.income` | `string \| number` | No | Digits only, at least 4 digits, > 0 |
+| `workProfile.companyName` | `string` | No | Company name |
+| `workProfile.udyamNumber` | `string \| null` | No | Allowed only when employment type is self-employed |
+| `address` | `object` | No | Address prefill |
+| `address.addressL1` | `string` | No | Address line 1 |
+| `address.addressL2` | `string` | No | Address line 2 |
+| `address.city` | `string` | No | City |
+| `address.state` | `string` | No | State |
+| `address.pincode` | `string` | No | PIN code |
+
+### Canonical Normalization
+
+- `gender` is normalized to: `male`, `female`, `transgender`
+- `employmentType` is normalized to: `salaried`, `selfEmployed`
+
+Example accepted `employmentType` inputs:
+- `Salaried` -> `salaried`
+- `SELFEMPLOYED` -> `selfEmployed`
+- `self-employed` -> `selfEmployed`
+- `self employed` -> `selfEmployed`
+
 ### cURL example
 
 ```bash
