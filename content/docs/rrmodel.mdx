@@ -12,7 +12,7 @@ We will be communicating data through webhooks, callbacks, and events in a speci
 
 Use `application/json` with these top-level keys:
 
-- `borrowerProviderID` (required)
+- `borrowerProviderID` (required) (read: [Borrower Identity Mapping (Important)](#borrower-identity-mapping-important))
 - `profile` (object)
 - `workProfile` (object)
 - `address` (object)
@@ -62,17 +62,17 @@ If detailed borrower information is available and you wish to prefill these fiel
 
 | Field | Type | Required | Accepted values / Notes |
 |---|---|---|---|
-| `borrowerProviderID` | `string` | Yes | Non-empty unique borrower reference from your system |
+| `borrowerProviderID` | `string` | Yes | Non-empty unique borrower reference from your system (read: [Borrower Identity Mapping (Important)](#borrower-identity-mapping-important)) |
 | `profile` | `object` | Yes (with at least required fields) | Borrower profile prefill |
 | `profile.contactNumber` | `string` | Yes | Indian mobile number (10 digits, optional `+91`) |
 | `profile.pan` | `string` | No | Valid PAN (normalized to uppercase) |
 | `profile.panName` | `string` | No | PAN name |
 | `profile.dob` | `string` | No | Date string (recommended: `YYYY-MM-DD`) |
-| `profile.gender` | `string` | No | Case-insensitive: `male`, `female`, `transgender` |
+| `profile.gender` | `string` | No | Case-insensitive: `male`, `female`, `transgender` (read: [Canonical Normalization](#canonical-normalization)) |
 | `profile.personalemail` | `string` | No | Valid email (normalized to lowercase) |
 | `workProfile` | `object` | No | Employment prefill |
 | `workProfile.officialemail` | `string` | No | Valid email |
-| `workProfile.employmentType` | `string` | No | Case-insensitive canonical values: `salaried`, `selfEmployed`; aliases accepted: `self-employed`, `self employed` |
+| `workProfile.employmentType` | `string` | No | Case-insensitive canonical values: `salaried`, `selfEmployed`; aliases accepted: `self-employed`, `self employed` (read: [Canonical Normalization](#canonical-normalization)) |
 | `workProfile.income` | `string \| number` | No | Digits only, at least 4 digits, > 0 |
 | `workProfile.companyName` | `string` | No | Company name |
 | `workProfile.udyamNumber` | `string \| null` | No | Allowed only when employment type is self-employed |
@@ -82,6 +82,36 @@ If detailed borrower information is available and you wish to prefill these fiel
 | `address.city` | `string` | No | City |
 | `address.state` | `string` | No | State |
 | `address.pincode` | `string` | No | PIN code |
+
+### Borrower Identity Mapping (Important)
+
+`borrowerProviderID` is the **permanent borrower identity key** on your side.
+
+You must keep a **1:1, stable mapping** between:
+
+- `mobile number` ↔ `borrowerProviderID`
+
+#### Example
+
+If mobile number `8000352223` is first initialized with:
+
+- `borrowerProviderID = 1234`
+
+then every future session for that same mobile number must continue to send:
+
+- `borrowerProviderID = 1234`
+
+#### What happens if this changes?
+
+If you send a different ID for the same mobile number (for example `1235`), the platform will treat this as a **new borrower**. As a result:
+
+- previously created applications will not appear for resume
+- post-disbursal journey/application tracking will break
+- the borrower will need to start a fresh application flow
+
+#### Integration rule
+
+To preserve resume, tracking, and post-disbursal continuity, always send the **same `borrowerProviderID` for the same mobile number** across all sessions.
 
 ### Canonical Normalization
 
