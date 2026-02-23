@@ -1,0 +1,869 @@
+---
+title: Request-Response Model (Gold Loan)
+description: Gold Loan request-response model for hosted journey integrations.
+---
+
+We will be communicating data through callbacks and events in a specific request-response format. This is the Gold Loan journey model, aligned to the same style as the Personal Loan RR document.
+
+## Request
+
+### `POST /api/lab/sessions` request format
+
+`PLATFORM_API_KEY` goes in `Authorization: Bearer ${PLATFORM_API_KEY}`.
+
+Use `application/json` with these top-level keys:
+
+- `borrowerProviderID` (required)
+- `journeyType` (required, must be `GOLD_LOAN`)
+- `profile` (required)
+- `workProfile` (optional)
+- `address` (optional)
+- `goldLoan` (recommended)
+
+Basic initialization:
+
+```json
+{
+  "borrowerProviderID": "BORROWER-123",
+  "journeyType": "GOLD_LOAN",
+  "profile": {
+    "contactNumber": "9876543210"
+  }
+}
+```
+
+Extended initialization:
+
+```json
+{
+  "borrowerProviderID": "BORROWER-123",
+  "journeyType": "GOLD_LOAN",
+  "profile": {
+    "contactNumber": "9876543210",
+    "pan": "ABCDE1234F",
+    "panName": "Rahul Sharma",
+    "dob": "1995-06-20",
+    "gender": "male",
+    "personalemail": "rahul@example.com"
+  },
+  "workProfile": {
+    "employmentType": "salaried",
+    "income": "75000",
+    "companyName": "Acme Pvt Ltd",
+    "officialemail": "rahul@company.com"
+  },
+  "address": {
+    "addressL1": "Flat 301, Sunrise Heights",
+    "addressL2": "MG Road",
+    "city": "Bengaluru",
+    "state": "Karnataka",
+    "pincode": "560001"
+  },
+  "goldLoan": {
+    "userType": "individual",
+    "constitution": null,
+    "jewelleryType": "necklace",
+    "jewelleryWeightGrams": 52,
+    "purity": "22K",
+    "endUse": "medicalTreatmentAndEmergencies",
+    "bureauConsent": true,
+    "aaID": "9876543210@finvu",
+    "requestedAmount": "400000",
+    "requestedTenureMonths": 5
+  }
+}
+```
+
+### Request Schema
+
+| Field | Type | Required | Accepted values / Notes |
+|---|---|---|---|
+| `borrowerProviderID` | `string` | Yes | Stable borrower identity from your system |
+| `journeyType` | `string` | Yes | Must be `GOLD_LOAN` |
+| `profile.contactNumber` | `string` | Yes | Indian mobile number (10 digits, optional `+91`) |
+| `profile.pan` | `string` | No | Valid PAN, normalized uppercase |
+| `profile.panName` | `string` | No | PAN name |
+| `profile.dob` | `string` | No | Date string (`YYYY-MM-DD`) |
+| `profile.gender` | `string` | No | `male`, `female`, `transgender` |
+| `profile.personalemail` | `string` | No | Valid email |
+| `workProfile.employmentType` | `string` | No | `salaried` or `selfEmployed` |
+| `workProfile.income` | `string \| number` | No | Digits only, positive |
+| `workProfile.companyName` | `string` | No | Employer/business name |
+| `address.pincode` | `string` | No | PIN code |
+| `goldLoan.userType` | `string` | No | `individual`, `non-individual` |
+| `goldLoan.constitution` | `string \| null` | No | Mandatory for non-individual |
+| `goldLoan.jewelleryType` | `string` | No | Necklace, Chain, Ring, Bracelet, Bangle, Stud, Coin, Other |
+| `goldLoan.jewelleryWeightGrams` | `number \| string` | No | Positive number |
+| `goldLoan.purity` | `string` | No | `24K`, `22K`, `21K`, `18K`, `14K`, `9K` |
+| `goldLoan.endUse` | `string` | No | Marriage, Family Functions, Medical, Travel, Education, Business, Agriculture, Equipment, Other |
+| `goldLoan.bureauConsent` | `boolean` | No | Must be `true` before bureau flow |
+| `goldLoan.aaID` | `string` | No | AA handle |
+| `goldLoan.requestedAmount` | `string \| number` | No | Requested amount |
+| `goldLoan.requestedTenureMonths` | `number \| string` | No | Requested tenure in months |
+
+### Borrower Identity Mapping (Important)
+
+`borrowerProviderID` is your permanent borrower identity key.
+
+Maintain a stable 1:1 mapping:
+
+- `mobile number` maps 1:1 to `borrowerProviderID`
+
+If this changes for the same mobile number, the platform may treat the borrower as new, which can break resume continuity and post-disbursal tracking.
+
+## Action Flow
+
+1. `search`
+2. `on_search`
+3. `form`
+4. `select`
+5. `on_select`
+6. `form`
+7. `select`
+8. `on_select`
+9. `form`
+10. `on_status`
+11. `status`
+12. `on_status`
+13. `init`
+14. `on_init`
+15. `confirm`
+16. `on_confirm`
+
+## Response
+
+### Journey snapshots via postMessage
+
+```tsx
+"use client";
+
+import { useEffect } from "react";
+
+const PLATFORM_ORIGIN = "https://your-platform-domain.com";
+
+export function useJourneySnapshots() {
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== PLATFORM_ORIGIN) return;
+
+      const snapshot = event.data as
+        | { borrower?: { journeys?: unknown[] } }
+        | null;
+      if (!snapshot?.borrower?.journeys) return;
+
+      void fetch("/api/journey-snapshots", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(snapshot),
+      });
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
+}
+```
+
+### 1. `search`
+
+```json
+{
+  action: `search`,
+  transaction_id: // Unique ID for the full Gold Loan journey.
+  message_id: // Unique ID for this request.
+  message: {
+    intent: {
+      category: {
+        descriptor: {
+          code: `GOLD_LOAN`,
+        },
+      },
+      payment: {
+        collected_by: `BPP`,
+      },
+    },
+  },
+}
+```
+
+### 2. `on_search`
+
+```json
+{
+  action: `on_search`,
+  transaction_id: // Same as `search` transaction.
+  message: {
+    catalog: {
+      descriptor: {
+        name: // Lender brand name. *Example:* `ICICI Bank`,
+      },
+      providers: [
+        {
+          id: // Provider ID from lender network.
+          descriptor: {
+            name: // Provider display name.
+            short_desc: // Provider short description.
+            long_desc: // Provider long description.
+          },
+          categories: [
+            {
+              id: // Category ID for Gold Loan.
+              descriptor: {
+                code: `GOLD_LOAN`,
+                name: `Gold Loan`,
+              },
+            },
+            {
+              id: // Subcategory ID.
+              parent_category_id: // Gold Loan category ID.
+              descriptor: {
+                code: `BUREAU_LOAN`,
+                name: `Bureau Loan`,
+              },
+            },
+            {
+              id: // Subcategory ID.
+              parent_category_id: // Gold Loan category ID.
+              descriptor: {
+                code: `AA_LOAN`,
+                name: `Account Aggregator Loan`,
+              },
+            },
+          ],
+          items: [
+            {
+              id: // *Example:* `ITEM_ID_GOLD_LOAN_1`,
+              descriptor: {
+                code: `LOAN`,
+                name: `Gold Loan without AA`,
+              },
+              matched: true,
+              recommended: true,
+              xinput: {
+                head: {
+                  descriptor: { name: `Customer Information` },
+                  headings: [`PERSONAL_INFORMATION`],
+                },
+                form: {
+                  mime_type: `text/html`,
+                  url: // Hosted form URL.
+                },
+                required: true,
+              },
+            },
+            {
+              id: // *Example:* `ITEM_ID_GOLD_LOAN_2`,
+              descriptor: {
+                code: `LOAN`,
+                name: `Gold Loan with AA`,
+              },
+              matched: true,
+              recommended: true,
+              xinput: {
+                form: {
+                  mime_type: `text/html`,
+                  url: // Hosted form URL.
+                },
+                required: true,
+              },
+            },
+          ],
+        },
+      ],
+    },
+  },
+}
+```
+
+### 3. `form`
+
+```json
+{
+  purpose: `Collect borrower + gold details`,
+  fields: {
+    userType: // `individual` (default) or `non-individual`.
+    pan: // Mandatory.
+    fullName: // Mandatory.
+    constitution: // Mandatory for non-individual.
+    gender: // Mandatory for individual.
+    employmentType: // Mandatory for individual.
+    dobOrDoi: // DOB for individual, DOI for non-individual.
+    annualIncome: // Mandatory.
+    contactNumber: // Mandatory.
+    email: // Optional.
+    address: // Optional.
+    pincode: // Mandatory.
+    city: // Optional.
+    state: // Optional.
+    jewelleryType: // Mandatory.
+    jewelleryWeightGrams: // Mandatory.
+    purity: // Mandatory.
+    endUse: // Mandatory.
+    bureauConsent: // Mandatory before bureau flow.
+    aaHandle: // Optional / conditional.
+  },
+}
+```
+
+### 4. `select`
+
+```json
+{
+  action: `select`,
+  transaction_id: // Same journey transaction.
+  message: {
+    order: {
+      provider: {
+        id: // Selected provider ID.
+      },
+      items: [
+        {
+          id: // Selected Gold Loan item.
+          xinput: {
+            form: {},
+            form_response: {
+              status: `SUCCESS`,
+              submission_id: // Form submission reference ID.
+            },
+          },
+        },
+      ],
+    },
+  },
+}
+```
+
+### 5. `on_select` (offer + locations + next form)
+
+```json
+{
+  action: `on_select`,
+  transaction_id: // Same journey transaction.
+  message: {
+    order: {
+      provider: {
+        id: // Selected provider ID.
+        locations: [
+          {
+            id: `L1`,
+            gps: // Latitude,Longitude.
+            descriptor: { name: `Mumbai Central` },
+            address: // Branch address.
+            area_code: `400001`,
+          },
+          {
+            id: `L2`,
+            gps: // Latitude,Longitude.
+            descriptor: { name: `Mumbai East` },
+            address: // Branch address.
+            area_code: `400001`,
+          },
+          {
+            id: `L3`,
+            gps: // Latitude,Longitude.
+            descriptor: { name: `Mumbai West` },
+            address: // Branch address.
+            area_code: `400001`,
+          },
+        ],
+      },
+      items: [
+        {
+          id: // Gold Loan item.
+          price: {
+            currency: `INR`,
+            value: // Offer price value.
+          },
+          xinput: {
+            head: {
+              descriptor: { name: `Set Loan Amount` },
+              headings: [`SET_LOAN_AMOUNT`, `JOURNEY_OFFLINE`],
+            },
+            form: {
+              mime_type: `text/html`,
+              url: // Hosted form URL.
+            },
+            required: true,
+          },
+        },
+      ],
+      quote: {
+        id: // Lead / quote identifier.
+        price: {
+          currency: `INR`,
+          value: // Total payable value.
+        },
+      },
+    },
+  },
+}
+```
+
+### 6. `form`
+
+```json
+{
+  purpose: `Borrower updates amount and term`,
+  fields: {
+    requestedAmount: // Loan amount borrower wants.
+    requestedTerm: // Tenure borrower wants.
+  },
+}
+```
+
+### 7. `select` (submit amount/term + choose location)
+
+```json
+{
+  action: `select`,
+  transaction_id: // Same journey transaction.
+  message: {
+    order: {
+      provider: {
+        id: // Selected provider ID.
+      },
+      items: [
+        {
+          id: // Gold Loan item.
+          location_ids: [
+            // One selected location ID. *Example:* `L2`
+          ],
+          xinput: {
+            form: {},
+            form_response: {
+              status: `SUCCESS`,
+              submission_id: // Form submission reference ID.
+            },
+          },
+        },
+      ],
+    },
+  },
+}
+```
+
+### 8. `on_select` (updated offer + fulfillment agent + next form)
+
+```json
+{
+  action: `on_select`,
+  transaction_id: // Same journey transaction.
+  message: {
+    order: {
+      provider: {
+        id: // Selected provider ID.
+      },
+      items: [
+        {
+          id: // Gold Loan item.
+          location_ids: [
+            // Same selected location ID.
+          ],
+          xinput: {
+            head: {
+              descriptor: { name: `JOURNEY_OFFLINE` },
+              headings: [`SET_LOAN_AMOUNT`, `JOURNEY_OFFLINE`],
+            },
+            form: {
+              mime_type: `text/html`,
+              url: // Hosted form URL for next step.
+            },
+            required: true,
+          },
+        },
+      ],
+      fulfillments: [
+        {
+          type: `LOAN`,
+          agent: {
+            person: {
+              name: // Field agent / inspector name.
+            },
+            contact: {
+              phone: // Field agent / inspector contact number.
+            },
+          },
+        },
+      ],
+      quote: {
+        id: // Lead / quote identifier.
+        price: {
+          currency: `INR`,
+          value: // Updated value after borrower amount selection.
+        },
+      },
+    },
+  },
+}
+```
+
+### 9. `form`
+
+```json
+{
+  purpose: `Collect KYC / bank details / e-mandate / e-sign`,
+  flow: {
+    mode: `online` | `offline`,
+    redirects: [
+      // KYC page, mandate page, e-sign page, etc.
+    ],
+  },
+}
+```
+
+### 10. `on_status` (form status update)
+
+```json
+{
+  action: `on_status`,
+  transaction_id: // Same journey transaction.
+  message: {
+    order: {
+      items: [
+        {
+          id: // Gold Loan item.
+          xinput: {
+            form: {},
+            form_response: {
+              status: `OFFLINE_PENDING`,
+              submission_id: // Form submission reference ID.
+            },
+          },
+        },
+      ],
+      fulfillments: [
+        {
+          type: `LOAN`,
+          agent: {
+            person: {
+              name: // Inspector/agent assigned.
+            },
+            contact: {
+              phone: // Inspector/agent contact.
+            },
+          },
+        },
+      ],
+    },
+  },
+}
+```
+
+### 11. `status` (borrower asks latest status)
+
+```json
+{
+  action: `status`,
+  transaction_id: // Same journey transaction.
+  message: {
+    ref_id: // Reference ID for the journey/order.
+  },
+}
+```
+
+### 12. `on_status` (latest status response)
+
+```json
+{
+  action: `on_status`,
+  transaction_id: // Same journey transaction.
+  message: {
+    order: {
+      items: [
+        {
+          id: // Gold Loan item.
+          xinput: {
+            form: {},
+            form_response: {
+              status: `COMPLETED`,
+              submission_id: // Form submission reference ID.
+            },
+          },
+        },
+      ],
+      quote: {
+        id: // Lead / quote identifier.
+        price: {
+          currency: `INR`,
+          value: // Latest value.
+        },
+      },
+    },
+  },
+}
+```
+
+### 13. `init`
+
+```json
+{
+  action: `init`,
+  transaction_id: // Same journey transaction.
+  message: {
+    order: {
+      provider: {
+        id: // Selected provider ID.
+      },
+      items: [
+        {
+          id: // Gold Loan item.
+          xinput: {
+            form: {},
+            form_response: {
+              status: `SUCCESS`,
+              submission_id: // Form submission reference ID.
+            },
+          },
+        },
+      ],
+      payments: [
+        {
+          id: // Payment ID.
+          collected_by: `BPP`,
+          type: `ON_ORDER`,
+          status: `NOT-PAID`,
+          params: {
+            bank_code: // Borrower bank code.
+            bank_account_number: // Borrower account number.
+            virtual_payment_address: // Borrower VPA.
+          },
+        },
+      ],
+    },
+  },
+}
+```
+
+### 14. `on_init`
+
+```json
+{
+  action: `on_init`,
+  transaction_id: // Same journey transaction.
+  message: {
+    order: {
+      id: // Finalized order/lead ID.
+      quote: {
+        id: // Quote ID.
+        price: {
+          currency: `INR`,
+          value: // Total payable.
+        },
+      },
+      fulfillments: [
+        {
+          type: `LOAN`,
+          customer: {
+            person: {
+              name: // Borrower name.
+            },
+            contact: {
+              phone: // Borrower contact number.
+              email: // Borrower email.
+            },
+          },
+          agent: {
+            person: {
+              name: // Assigned inspection/disbursal agent.
+            },
+            contact: {
+              phone: // Assigned agent contact.
+            },
+          },
+          state: {
+            descriptor: {
+              code: `SANCTIONED`,
+            },
+          },
+        },
+      ],
+      payments: [
+        {
+          id: // Upfront payment ID.
+          type: `ON_ORDER`,
+          status: `NOT-PAID`,
+          collected_by: `BPP`,
+        },
+        {
+          id: // Installment payment ID.
+          type: `POST_FULFILLMENT`,
+          status: `NOT-PAID`,
+          params: {
+            amount: // Installment amount.
+            currency: `INR`,
+          },
+          time: {
+            label: `INSTALLMENT`,
+            range: {
+              start: // Installment start datetime.
+              end: // Installment end datetime.
+            },
+          },
+        },
+      ],
+      cancellation_terms: [
+        {
+          fulfillment_state: {
+            descriptor: { code: `SANCTIONED` },
+          },
+          cancellation_fee: {
+            percentage: // Cancellation fee in sanctioned state.
+          },
+        },
+        {
+          fulfillment_state: {
+            descriptor: { code: `DISBURSED` },
+          },
+          cancellation_fee: {
+            percentage: // Cancellation fee in disbursed state.
+          },
+        },
+      ],
+    },
+  },
+}
+```
+
+### 15. `confirm`
+
+```json
+{
+  action: `confirm`,
+  transaction_id: // Same journey transaction.
+  message: {
+    order: {
+      provider: {
+        id: // Selected provider ID.
+      },
+      items: [
+        {
+          id: // Gold Loan item.
+        },
+      ],
+      payments: [
+        {
+          id: // Payment ID.
+          collected_by: `BPP`,
+          type: `ON_ORDER`,
+          status: `NOT-PAID`,
+        },
+      ],
+    },
+  },
+}
+```
+
+### 16. `on_confirm`
+
+```json
+{
+  action: `on_confirm`,
+  transaction_id: // Same journey transaction.
+  message: {
+    order: {
+      id: // Final order ID.
+      fulfillments: [
+        {
+          type: `LOAN`,
+          agent: {
+            person: {
+              name: // Final assigned field agent.
+            },
+            contact: {
+              phone: // Final assigned field agent phone.
+            },
+          },
+          state: {
+            descriptor: {
+              code: `DISBURSED`,
+            },
+          },
+        },
+      ],
+      documents: [
+        {
+          descriptor: {
+            code: `LOAN_AGREEMENT`,
+            name: `Loan Agreement Document`,
+          },
+          mime_type: `application/pdf`,
+          url: // Agreement URL.
+        },
+        {
+          descriptor: {
+            code: `LOAN_CANCELLATION`,
+            name: `Loan Cancellation Document`,
+          },
+          mime_type: `application/pdf`,
+          url: // Cancellation document URL.
+        },
+      ],
+    },
+  },
+}
+```
+
+## Gold Loan Personal Details Contract
+
+```json
+{
+  userType: {
+    required: true,
+    values: [`individual`, `non-individual`],
+    default: `individual`,
+  },
+  pan: { required: true },
+  fullName: { required: true },
+  constitution: { required: `for non-individual` },
+  gender: { required: `for individual`, values: [`male`, `female`, `transgender`] },
+  employmentType: { required: `for individual`, values: [`salaried`, `selfEmployed`] },
+  dobOrDoi: { required: true },
+  annualIncome: { required: true },
+  mobileNumber: { required: true },
+  email: { required: false },
+  address: { required: false },
+  pincode: { required: true },
+  city: { required: false },
+  state: { required: false },
+  jewelleryType: {
+    required: true,
+    values: [
+      `Necklaces`,
+      `Chains`,
+      `Rings`,
+      `Bracelets`,
+      `Bangles`,
+      `Studs`,
+      `Gold Coins`,
+      `Others`,
+    ],
+  },
+  jewelleryWeightGrams: { required: true },
+  endUse: {
+    required: true,
+    values: [
+      `Marriage`,
+      `Family Functions`,
+      `Medical Treatment and Emergencies`,
+      `Travel, Education Expenses`,
+      `Business Expansion`,
+      `Agriculture and Farm-Related Needs`,
+      `Purchase of Equipment`,
+      `Others`,
+    ],
+  },
+  bureauConsent: { required: true },
+  aaHandle: { required: false },
+}
+```
+
+## Gold Grams to Amount Guidance
+
+```text
+eligible_loan_amount = jewellery_weight_grams
+                     * purity_factor
+                     * avg_gold_price_per_gram_last_30_days
+                     * lender_ltv
+```
+
+Use server-side calculation and persist audit logs for each borrower transaction.
