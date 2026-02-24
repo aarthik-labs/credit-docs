@@ -9,6 +9,7 @@
     "types:check": "fumadocs-mdx && next typegen && tsc --noEmit",
     "postinstall": "fumadocs-mdx",
     "lint": "eslint",
+    "vcs:id:aarthikbandhu": "git config user.name 'AarthikBandhu' && git config user.email 'harshit@aarthiklabs.com'",
     "utilities:copy-codebase": "zsh -lc 'DIR=\"${1:-.}\"; find \"$DIR\" -type f -not -path \"*/.*\" -not -path \"*/src/lib/components/*\" -not -path \"*/src/lib/database/diagrams/*\" -not -path \"*/node_modules/*\" -not -path \"*/dist/*\" -not -path \"*/build/*\" -not -path \"*/public/*\" -not -path \"*/.git/*\" -not -path \"*/.next/*\" -not -name \"pnpm-lock.yaml\" -not -name \"create-commit.sh\" -not -name \"create-commit-message.sh\" -not -name \"AGENTS.md\" -not -name \"README.md\" -not -name \".gitignore\" -not -name \".env\" -not \\( -name \"*.mmd\" -o -name \"*.svg\" -o -name \"*.ico\" -o -name \"*.png\" -o -name \"*.jpg\" -o -name \"*.jpeg\" \\) -exec tail -n +1 {} + | pbcopy' --"
   },
   "dependencies": {

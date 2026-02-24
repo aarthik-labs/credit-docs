@@ -3,25 +3,27 @@ title: Request-Response Model (Gold Loan)
 description: Gold Loan request-response model for hosted journey integrations.
 ---
 
-We will be communicating data through callbacks and events in a specific request-response format. This is the Gold Loan journey model, aligned to the same style as the Personal Loan RR document.
+# Request-Response Model
+
+Credit SDK by Aarthik Labs
+
+## Scope
+This is the Gold Loan request-response model for hosted journey integrations. It follows the same integration style as your existing RR-model docs and uses Gold-specific fields and lifecycle semantics.
 
 ## Request
 
 ### `POST /api/lab/sessions` request format
+- Send API key in `Authorization: Bearer ${PLATFORM_API_KEY}`.
+- Use `Content-Type: application/json`.
+- Top-level request keys:
+  - `borrowerProviderID` (required)
+  - `journeyType` (required, must be `GOLD_LOAN`)
+  - `profile` (required with mandatory profile fields)
+  - `workProfile` (optional)
+  - `address` (optional)
+  - `goldLoan` (optional but strongly recommended)
 
-`PLATFORM_API_KEY` goes in `Authorization: Bearer ${PLATFORM_API_KEY}`.
-
-Use `application/json` with these top-level keys:
-
-- `borrowerProviderID` (required)
-- `journeyType` (required, must be `GOLD_LOAN`)
-- `profile` (required)
-- `workProfile` (optional)
-- `address` (optional)
-- `goldLoan` (recommended)
-
-Basic initialization:
-
+### Basic initialization
 ```json
 {
   "borrowerProviderID": "BORROWER-123",
@@ -32,8 +34,7 @@ Basic initialization:
 }
 ```
 
-Extended initialization:
-
+### Extended initialization (recommended)
 ```json
 {
   "borrowerProviderID": "BORROWER-123",
@@ -47,10 +48,11 @@ Extended initialization:
     "personalemail": "rahul@example.com"
   },
   "workProfile": {
+    "officialemail": "rahul@company.com",
     "employmentType": "salaried",
     "income": "75000",
     "companyName": "Acme Pvt Ltd",
-    "officialemail": "rahul@company.com"
+    "udyamNumber": null
   },
   "address": {
     "addressL1": "Flat 301, Sunrise Heights",
@@ -62,7 +64,6 @@ Extended initialization:
   "goldLoan": {
     "userType": "individual",
     "constitution": null,
-    "jewelleryType": "necklace",
     "jewelleryWeightGrams": 52,
     "purity": "22K",
     "endUse": "medicalTreatmentAndEmergencies",
@@ -74,69 +75,102 @@ Extended initialization:
 }
 ```
 
-### Request Schema
+## Request Schema
 
 | Field | Type | Required | Accepted values / Notes |
 |---|---|---|---|
 | `borrowerProviderID` | `string` | Yes | Stable borrower identity from your system |
 | `journeyType` | `string` | Yes | Must be `GOLD_LOAN` |
+| `profile` | `object` | Yes | Borrower profile prefill |
 | `profile.contactNumber` | `string` | Yes | Indian mobile number (10 digits, optional `+91`) |
 | `profile.pan` | `string` | No | Valid PAN, normalized uppercase |
 | `profile.panName` | `string` | No | PAN name |
-| `profile.dob` | `string` | No | Date string (`YYYY-MM-DD`) |
-| `profile.gender` | `string` | No | `male`, `female`, `transgender` |
-| `profile.personalemail` | `string` | No | Valid email |
-| `workProfile.employmentType` | `string` | No | `salaried` or `selfEmployed` |
-| `workProfile.income` | `string \| number` | No | Digits only, positive |
-| `workProfile.companyName` | `string` | No | Employer/business name |
+| `profile.dob` | `string` | No | Date string, recommended `YYYY-MM-DD` |
+| `profile.gender` | `string` | No | Normalized to `male`, `female`, `transgender` |
+| `profile.personalemail` | `string` | No | Valid email, normalized lowercase |
+| `workProfile` | `object` | No | Employment prefill |
+| `workProfile.officialemail` | `string` | No | Valid email |
+| `workProfile.employmentType` | `string` | No | `salaried` or `selfEmployed` (aliases accepted) |
+| `workProfile.income` | `string \| number` | No | Digits only, positive integer |
+| `workProfile.companyName` | `string` | No | Employer / business name |
+| `workProfile.udyamNumber` | `string \| null` | No | Allowed only for `selfEmployed` |
+| `address` | `object` | No | Address prefill |
+| `address.addressL1` | `string` | No | Address line 1 |
+| `address.addressL2` | `string` | No | Address line 2 |
+| `address.city` | `string` | No | City |
+| `address.state` | `string` | No | State |
 | `address.pincode` | `string` | No | PIN code |
-| `goldLoan.userType` | `string` | No | `individual`, `non-individual` |
-| `goldLoan.constitution` | `string \| null` | No | Mandatory for non-individual |
-| `goldLoan.jewelleryType` | `string` | No | Necklace, Chain, Ring, Bracelet, Bangle, Stud, Coin, Other |
-| `goldLoan.jewelleryWeightGrams` | `number \| string` | No | Positive number |
-| `goldLoan.purity` | `string` | No | `24K`, `22K`, `21K`, `18K`, `14K`, `9K` |
-| `goldLoan.endUse` | `string` | No | Marriage, Family Functions, Medical, Travel, Education, Business, Agriculture, Equipment, Other |
+| `goldLoan` | `object` | No | Gold Loan prefill object |
+| `goldLoan.userType` | `string` | No | `individual` or `non-individual` |
+| `goldLoan.constitution` | `string \| null` | No | Applicable for non-individual borrowers |
+| `goldLoan.jewelleryWeightGrams` | `number \| string` | No | Gold weight in grams, positive |
+| `goldLoan.purity` | `string` | No | Canonical: `24K`, `22K`, `21K`, `18K`, `14K`, `9K` |
+| `goldLoan.endUse` | `string` | No | e.g. `businessExpansion`, `marriage`, `medicalTreatmentAndEmergencies` |
 | `goldLoan.bureauConsent` | `boolean` | No | Must be `true` before bureau flow |
-| `goldLoan.aaID` | `string` | No | AA handle |
-| `goldLoan.requestedAmount` | `string \| number` | No | Requested amount |
+| `goldLoan.aaID` | `string` | No | AA handle (example: `9876543210@finvu`) |
+| `goldLoan.requestedAmount` | `string \| number` | No | Requested loan amount |
 | `goldLoan.requestedTenureMonths` | `number \| string` | No | Requested tenure in months |
 
-### Borrower Identity Mapping (Important)
-
+## Borrower Identity Mapping (Important)
 `borrowerProviderID` is your permanent borrower identity key.
 
 Maintain a stable 1:1 mapping:
-
-- `mobile number` maps 1:1 to `borrowerProviderID`
+- `mobile number` ↔ `borrowerProviderID`
 
 If this changes for the same mobile number, the platform may treat the borrower as new, which can break resume continuity and post-disbursal tracking.
 
-## Action Flow
+## Canonical Normalization
+- `gender` normalizes to: `male`, `female`, `transgender`
+- `employmentType` normalizes to: `salaried`, `selfEmployed`
+- `purity` should be sent in canonical uppercase tokens, for example `22K`
 
-1. `search`
-2. `on_search`
-3. `form`
-4. `select`
-5. `on_select`
-6. `form`
-7. `select`
-8. `on_select`
-9. `form`
-10. `on_status`
-11. `status`
-12. `on_status`
-13. `init`
-14. `on_init`
-15. `confirm`
-16. `on_confirm`
+## cURL examples
+```bash
+curl --request POST "${PLATFORM_BASE_URL}/api/lab/sessions" \
+  --header "Authorization: Bearer ${PLATFORM_API_KEY}" \
+  --header "Content-Type: application/json" \
+  --data-raw '{
+    "borrowerProviderID": "BORROWER-123",
+    "journeyType": "GOLD_LOAN",
+    "profile": {
+      "contactNumber": "9876543210"
+    }
+  }'
+```
+
+```bash
+curl --request POST "${PLATFORM_BASE_URL}/api/lab/sessions" \
+  --header "Authorization: Bearer ${PLATFORM_API_KEY}" \
+  --header "Content-Type: application/json" \
+  --data-raw '{
+    "borrowerProviderID": "BORROWER-123",
+    "journeyType": "GOLD_LOAN",
+    "profile": {
+      "contactNumber": "9876543210",
+      "pan": "ABCDE1234F"
+    },
+    "goldLoan": {
+      "jewelleryWeightGrams": 52,
+      "purity": "22K",
+      "endUse": "businessExpansion",
+      "bureauConsent": true
+    }
+  }'
+```
+
+## Notes
+- `borrowerProviderID` is mandatory.
+- `journeyType = GOLD_LOAN` is mandatory for Gold Loan session creation.
+- `profile.contactNumber` is mandatory.
+- Always validate and protect borrower PII in transit and at rest.
 
 ## Response
 
 ### Journey snapshots via postMessage
+The hosted journey posts updates to the parent window. Validate origin and forward to your backend if required.
 
 ```tsx
 "use client";
-
 import { useEffect } from "react";
 
 const PLATFORM_ORIGIN = "https://your-platform-domain.com";
@@ -145,12 +179,8 @@ export function useJourneySnapshots() {
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.origin !== PLATFORM_ORIGIN) return;
-
-      const snapshot = event.data as
-        | { borrower?: { journeys?: unknown[] } }
-        | null;
+      const snapshot = event.data as { borrower?: { journeys?: unknown[] } } | null;
       if (!snapshot?.borrower?.journeys) return;
-
       void fetch("/api/journey-snapshots", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -164,706 +194,561 @@ export function useJourneySnapshots() {
 }
 ```
 
-### 1. `search`
+Validate `event.origin` strictly. Snapshot payloads may contain PII.
 
+## Common Response Envelope
 ```json
 {
-  action: `search`,
-  transaction_id: // Unique ID for the full Gold Loan journey.
-  message_id: // Unique ID for this request.
-  message: {
-    intent: {
-      category: {
-        descriptor: {
-          code: `GOLD_LOAN`,
-        },
+  "tenant_id": "TENANT_ID",
+  "application_id": "APPLICATION_ID",
+  "borrower": {
+    "id": "AL_BORROWER_ID",
+    "tenant_id": "TENANT_ID",
+    "application_id": "APPLICATION_ID",
+    "provider_id": "BORROWER-123",
+    "profile": {
+      "Personal": {
+        "contactNumber": "+919876543210"
       },
-      payment: {
-        collected_by: `BPP`,
-      },
+      "Work": {},
+      "Address": {},
+      "GoldLoan": {}
     },
-  },
+    "journeys": []
+  }
 }
 ```
 
-### 2. `on_search`
+`locations` and `fulfillments` are available in journey snapshots with this shape:
 
+- `journeys[].lenders[].locations[]`: branch/serviceability options exposed by the lender.
+- `journeys[].fulfillments[]`: operational execution objects (selected location, assigned agent, current execution state).
+
+## 1. Journey Started
 ```json
 {
-  action: `on_search`,
-  transaction_id: // Same as `search` transaction.
-  message: {
-    catalog: {
-      descriptor: {
-        name: // Lender brand name. *Example:* `ICICI Bank`,
-      },
-      providers: [
-        {
-          id: // Provider ID from lender network.
-          descriptor: {
-            name: // Provider display name.
-            short_desc: // Provider short description.
-            long_desc: // Provider long description.
-          },
-          categories: [
-            {
-              id: // Category ID for Gold Loan.
-              descriptor: {
-                code: `GOLD_LOAN`,
-                name: `Gold Loan`,
-              },
-            },
-            {
-              id: // Subcategory ID.
-              parent_category_id: // Gold Loan category ID.
-              descriptor: {
-                code: `BUREAU_LOAN`,
-                name: `Bureau Loan`,
-              },
-            },
-            {
-              id: // Subcategory ID.
-              parent_category_id: // Gold Loan category ID.
-              descriptor: {
-                code: `AA_LOAN`,
-                name: `Account Aggregator Loan`,
-              },
-            },
-          ],
-          items: [
-            {
-              id: // *Example:* `ITEM_ID_GOLD_LOAN_1`,
-              descriptor: {
-                code: `LOAN`,
-                name: `Gold Loan without AA`,
-              },
-              matched: true,
-              recommended: true,
-              xinput: {
-                head: {
-                  descriptor: { name: `Customer Information` },
-                  headings: [`PERSONAL_INFORMATION`],
-                },
-                form: {
-                  mime_type: `text/html`,
-                  url: // Hosted form URL.
-                },
-                required: true,
-              },
-            },
-            {
-              id: // *Example:* `ITEM_ID_GOLD_LOAN_2`,
-              descriptor: {
-                code: `LOAN`,
-                name: `Gold Loan with AA`,
-              },
-              matched: true,
-              recommended: true,
-              xinput: {
-                form: {
-                  mime_type: `text/html`,
-                  url: // Hosted form URL.
-                },
-                required: true,
-              },
-            },
-          ],
-        },
-      ],
+  "tenant_id": "TENANT_ID",
+  "application_id": "APPLICATION_ID",
+  "borrower": {
+    "id": "AL_BORROWER_ID",
+    "provider_id": "BORROWER-123",
+    "profile": {
+      "Personal": {
+        "contactNumber": "+919876543210"
+      }
     },
-  },
+    "journeys": [
+      {
+        "id": "JOURNEY_ID",
+        "tenant_id": "TENANT_ID",
+        "application_id": "APPLICATION_ID",
+        "borrower_id": "AL_BORROWER_ID",
+        "type": "GOLD_LOAN",
+        "status": "STARTED",
+        "activity_status": "ACTIVE",
+        "decision_status": "PENDING"
+      }
+    ]
+  }
 }
 ```
 
-### 3. `form`
-
+## 2. Application Data Collected
 ```json
 {
-  purpose: `Collect borrower + gold details`,
-  fields: {
-    userType: // `individual` (default) or `non-individual`.
-    pan: // Mandatory.
-    fullName: // Mandatory.
-    constitution: // Mandatory for non-individual.
-    gender: // Mandatory for individual.
-    employmentType: // Mandatory for individual.
-    dobOrDoi: // DOB for individual, DOI for non-individual.
-    annualIncome: // Mandatory.
-    contactNumber: // Mandatory.
-    email: // Optional.
-    address: // Optional.
-    pincode: // Mandatory.
-    city: // Optional.
-    state: // Optional.
-    jewelleryType: // Mandatory.
-    jewelleryWeightGrams: // Mandatory.
-    purity: // Mandatory.
-    endUse: // Mandatory.
-    bureauConsent: // Mandatory before bureau flow.
-    aaHandle: // Optional / conditional.
-  },
-}
-```
-
-### 4. `select`
-
-```json
-{
-  action: `select`,
-  transaction_id: // Same journey transaction.
-  message: {
-    order: {
-      provider: {
-        id: // Selected provider ID.
+  "tenant_id": "TENANT_ID",
+  "application_id": "APPLICATION_ID",
+  "borrower": {
+    "id": "AL_BORROWER_ID",
+    "provider_id": "BORROWER-123",
+    "profile": {
+      "Personal": {
+        "panName": "Rahul Sharma",
+        "dob": "1995-06-20T00:00:00.000Z",
+        "gender": "male",
+        "personalemail": "rahul@example.com",
+        "pan": "ABCDE1234F",
+        "contactNumber": "+919876543210"
       },
-      items: [
-        {
-          id: // Selected Gold Loan item.
-          xinput: {
-            form: {},
-            form_response: {
-              status: `SUCCESS`,
-              submission_id: // Form submission reference ID.
-            },
-          },
-        },
-      ],
+      "Work": {
+        "employmentType": "salaried",
+        "officialemail": "rahul@company.com",
+        "income": "75000",
+        "companyName": "Acme Pvt Ltd",
+        "udyamNumber": null
+      },
+      "Address": {
+        "addressL1": "Flat 301, Sunrise Heights",
+        "addressL2": "MG Road",
+        "city": "Bengaluru",
+        "state": "Karnataka",
+        "pincode": "560001"
+      },
+      "GoldLoan": {
+        "userType": "individual",
+        "constitution": null,
+        "jewelleryWeightGrams": 52,
+        "purity": "22K",
+        "endUse": "medicalTreatmentAndEmergencies",
+        "bureauConsent": true,
+        "aaID": "9876543210@finvu",
+        "requestedAmount": "400000",
+        "requestedTenureMonths": 5
+      }
     },
-  },
+    "journeys": [
+      {
+        "id": "JOURNEY_ID",
+        "type": "GOLD_LOAN",
+        "status": "PROFILED",
+        "activity_status": "ACTIVE",
+        "decision_status": "PENDING"
+      }
+    ]
+  }
 }
 ```
 
-### 5. `on_select` (offer + locations + next form)
+## 3. Offered
+If no offer is received, `offers` will be an empty array and status is `NOT_OFFERED`.
 
 ```json
 {
-  action: `on_select`,
-  transaction_id: // Same journey transaction.
-  message: {
-    order: {
-      provider: {
-        id: // Selected provider ID.
-        locations: [
+  "tenant_id": "TENANT_ID",
+  "application_id": "APPLICATION_ID",
+  "borrower": {
+    "id": "AL_BORROWER_ID",
+    "provider_id": "BORROWER-123",
+    "profile": {
+      "Personal": {},
+      "Work": {},
+      "Address": {},
+      "GoldLoan": {
+        "jewelleryWeightGrams": 52,
+        "purity": "22K"
+      }
+    },
+    "journeys": [
+      {
+        "id": "JOURNEY_ID",
+        "type": "GOLD_LOAN",
+        "status": "OFFERED",
+        "activity_status": "ACTIVE",
+        "decision_status": "APPROVED",
+        "lender_mode": "ONLINE",
+        "lenders": [
           {
-            id: `L1`,
-            gps: // Latitude,Longitude.
-            descriptor: { name: `Mumbai Central` },
-            address: // Branch address.
-            area_code: `400001`,
-          },
-          {
-            id: `L2`,
-            gps: // Latitude,Longitude.
-            descriptor: { name: `Mumbai East` },
-            address: // Branch address.
-            area_code: `400001`,
-          },
-          {
-            id: `L3`,
-            gps: // Latitude,Longitude.
-            descriptor: { name: `Mumbai West` },
-            address: // Branch address.
-            area_code: `400001`,
-          },
+            "id": "LENDER_ID",
+            "journey_id": "JOURNEY_ID",
+            "lender_name": "Lender XYZ NBFC",
+            "lender_gro_name": "Priya Menon",
+            "lender_gro_email": "gro@lenderxyz.com",
+            "lender_customer_support_email": "support@lenderxyz.com",
+            "locations": [
+              {
+                "id": "L1",
+                "name": "Mumbai Central Branch",
+                "address": "Fort, Mumbai, Maharashtra 400001",
+                "city": "Mumbai",
+                "state": "Maharashtra",
+                "pincode": "400001",
+                "gps": "18.9322,72.8320"
+              },
+              {
+                "id": "L2",
+                "name": "Mumbai East Branch",
+                "address": "Ghatkopar, Mumbai, Maharashtra 400086",
+                "city": "Mumbai",
+                "state": "Maharashtra",
+                "pincode": "400086",
+                "gps": "19.0854,72.9087"
+              },
+              {
+                "id": "L3",
+                "name": "Mumbai West Branch",
+                "address": "Andheri, Mumbai, Maharashtra 400053",
+                "city": "Mumbai",
+                "state": "Maharashtra",
+                "pincode": "400053",
+                "gps": "19.1197,72.8468"
+              }
+            ]
+          }
         ],
-      },
-      items: [
-        {
-          id: // Gold Loan item.
-          price: {
-            currency: `INR`,
-            value: // Offer price value.
-          },
-          xinput: {
-            head: {
-              descriptor: { name: `Set Loan Amount` },
-              headings: [`SET_LOAN_AMOUNT`, `JOURNEY_OFFLINE`],
+        "offers": [
+          {
+            "id": "OFFER_ID",
+            "journey_id": "JOURNEY_ID",
+            "lender_id": "LENDER_ID",
+            "accepted": false,
+            "expired": false,
+            "type": "GOLD_LOAN",
+            "amount_principal": "400000",
+            "amount_total_interest_payable": "42000",
+            "amount_net_disbursed_amount": "396500",
+            "offer_term": "5 months",
+            "interest_rate": "11.50",
+            "interest_type": "Fixed",
+            "annual_percentage_rate": "13.10%",
+            "number_of_installments": "5",
+            "terms_and_conditions_link": "https://lenderxyz.com/tnc/gold-loan",
+            "key_facts_statement_link": "https://lenderxyz.com/kfs/gold-loan",
+            "processing_fees": "1800",
+            "other_charges": "1000",
+            "pledged_gold_weight_grams": "52",
+            "pledged_gold_purity": "22K",
+            "loan_to_value_ratio": "75",
+            "valuation_amount": "533333"
+          }
+        ],
+        "fulfillments": [
+          {
+            "id": "FUL_1",
+            "type": "LOAN",
+            "mode": "OFFLINE",
+            "selected_location_id": null,
+            "state": {
+              "code": "LOCATION_SELECTION_PENDING"
             },
-            form: {
-              mime_type: `text/html`,
-              url: // Hosted form URL.
-            },
-            required: true,
-          },
-        },
-      ],
-      quote: {
-        id: // Lead / quote identifier.
-        price: {
-          currency: `INR`,
-          value: // Total payable value.
-        },
-      },
-    },
-  },
+            "agent": null
+          }
+        ]
+      }
+    ]
+  }
 }
 ```
 
-### 6. `form`
+### No-offer case
+```json
+{
+  "tenant_id": "TENANT_ID",
+  "application_id": "APPLICATION_ID",
+  "borrower": {
+    "id": "AL_BORROWER_ID",
+    "provider_id": "BORROWER-123",
+    "journeys": [
+      {
+        "id": "JOURNEY_ID",
+        "type": "GOLD_LOAN",
+        "status": "NOT_OFFERED",
+        "activity_status": "ACTIVE",
+        "decision_status": "NOT-APPROVED",
+        "lenders": [
+          {
+            "id": "LENDER_ID",
+            "lender_name": "Lender XYZ NBFC",
+            "locations": [
+              {
+                "id": "L1",
+                "name": "Mumbai Central Branch"
+              }
+            ]
+          }
+        ],
+        "offers": []
+      }
+    ]
+  }
+}
+```
+
+## 4. Offer Selected
+```json
+{
+  "tenant_id": "TENANT_ID",
+  "application_id": "APPLICATION_ID",
+  "borrower": {
+    "id": "AL_BORROWER_ID",
+    "provider_id": "BORROWER-123",
+    "journeys": [
+      {
+        "id": "JOURNEY_ID",
+        "type": "GOLD_LOAN",
+        "status": "OFFER_SELECTED",
+        "activity_status": "ACTIVE",
+        "decision_status": "APPROVED",
+        "borrower_preferred_amount": "400000",
+        "borrower_preferred_tenure": "5",
+        "selected_location_id": "L2",
+        "lender_mode": "ONLINE",
+        "lenders": [
+          {
+            "id": "LENDER_ID",
+            "lender_name": "Lender XYZ NBFC",
+            "locations": [
+              {
+                "id": "L1",
+                "name": "Mumbai Central Branch"
+              },
+              {
+                "id": "L2",
+                "name": "Mumbai East Branch"
+              },
+              {
+                "id": "L3",
+                "name": "Mumbai West Branch"
+              }
+            ]
+          }
+        ],
+        "offers": [
+          {
+            "id": "OFFER_ID",
+            "type": "GOLD_LOAN",
+            "accepted": false,
+            "expired": false,
+            "amount_principal": "400000"
+          }
+        ],
+        "fulfillments": [
+          {
+            "id": "FUL_1",
+            "type": "LOAN",
+            "mode": "OFFLINE",
+            "selected_location_id": "L2",
+            "state": {
+              "code": "LOCATION_SELECTED"
+            },
+            "agent": null
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+## 5. Offer Accepted
+```json
+{
+  "tenant_id": "TENANT_ID",
+  "application_id": "APPLICATION_ID",
+  "borrower": {
+    "id": "AL_BORROWER_ID",
+    "provider_id": "BORROWER-123",
+    "journeys": [
+      {
+        "id": "JOURNEY_ID",
+        "type": "GOLD_LOAN",
+        "status": "OFFER_ACCEPTED",
+        "activity_status": "ACTIVE",
+        "decision_status": "APPROVED",
+        "borrower_preferred_amount": "400000",
+        "borrower_preferred_tenure": "5",
+        "lender_mode": "ONLINE",
+        "offers": [
+          {
+            "id": "OFFER_ID",
+            "type": "GOLD_LOAN",
+            "accepted": true,
+            "expired": false,
+            "amount_principal": "400000"
+          }
+        ],
+        "fulfillments": [
+          {
+            "id": "FUL_1",
+            "type": "LOAN",
+            "mode": "OFFLINE",
+            "selected_location_id": "L2",
+            "state": {
+              "code": "SANCTIONED"
+            },
+            "agent": {
+              "name": "Rohan Kumar",
+              "phone": "+919999999999"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+## 6. Lender Redirected
+```json
+{
+  "tenant_id": "TENANT_ID",
+  "application_id": "APPLICATION_ID",
+  "borrower": {
+    "id": "AL_BORROWER_ID",
+    "provider_id": "BORROWER-123",
+    "journeys": [
+      {
+        "id": "JOURNEY_ID",
+        "type": "GOLD_LOAN",
+        "status": "LENDER_REDIRECTED",
+        "activity_status": "ACTIVE",
+        "decision_status": "APPROVED",
+        "lender_mode": "ONLINE",
+        "kyc_status": "PENDING",
+        "kyc_attempts": 1,
+        "emandate_status": "PENDING",
+        "emandate_attempts": 0,
+        "esign_status": "PENDING",
+        "esign_attempts": 0,
+        "change_in_offer": false,
+        "borrower_preferred_amount": "400000",
+        "borrower_preferred_tenure": "5",
+        "offers": [
+          {
+            "id": "OFFER_ID",
+            "type": "GOLD_LOAN",
+            "accepted": true,
+            "expired": false
+          }
+        ],
+        "fulfillments": [
+          {
+            "id": "FUL_1",
+            "type": "LOAN",
+            "mode": "OFFLINE",
+            "selected_location_id": "L2",
+            "state": {
+              "code": "PROCESSING"
+            },
+            "agent": {
+              "name": "Rohan Kumar",
+              "phone": "+919999999999"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+## 7. Disbursed
+```json
+{
+  "tenant_id": "TENANT_ID",
+  "application_id": "APPLICATION_ID",
+  "borrower": {
+    "id": "AL_BORROWER_ID",
+    "provider_id": "BORROWER-123",
+    "journeys": [
+      {
+        "id": "JOURNEY_ID",
+        "type": "GOLD_LOAN",
+        "status": "DISBURSED",
+        "activity_status": "ACTIVE",
+        "decision_status": "APPROVED",
+        "lender_mode": "ONLINE",
+        "kyc_status": "SUCCESS",
+        "kyc_attempts": 1,
+        "emandate_status": "SUCCESS",
+        "emandate_attempts": 1,
+        "esign_status": "SUCCESS",
+        "esign_attempts": 1,
+        "offers": [
+          {
+            "id": "OFFER_ID",
+            "type": "GOLD_LOAN",
+            "accepted": true,
+            "expired": false,
+            "amount_principal": "400000",
+            "number_of_installments": "5",
+            "installments": [
+              {
+                "serial_number": 1,
+                "type": "INSTALLMENT",
+                "amount": "88400",
+                "status": "PAID",
+                "installment_due_date": "2026-03-05T00:00:00Z"
+              },
+              {
+                "serial_number": 2,
+                "type": "INSTALLMENT",
+                "amount": "88400",
+                "status": "NOT-DUE",
+                "installment_due_date": "2026-04-05T00:00:00Z"
+              }
+            ]
+          }
+        ],
+        "fulfillments": [
+          {
+            "id": "FUL_1",
+            "type": "LOAN",
+            "mode": "OFFLINE",
+            "selected_location_id": "L2",
+            "state": {
+              "code": "DISBURSED"
+            },
+            "agent": {
+              "name": "Rohan Kumar",
+              "phone": "+919999999999"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+## 8. Collections Update
+Frequent post-disbursal event for installment state updates.
 
 ```json
 {
-  purpose: `Borrower updates amount and term`,
-  fields: {
-    requestedAmount: // Loan amount borrower wants.
-    requestedTerm: // Tenure borrower wants.
-  },
+  "tenant_id": "TENANT_ID",
+  "application_id": "APPLICATION_ID",
+  "borrower": {
+    "id": "AL_BORROWER_ID",
+    "provider_id": "BORROWER-123",
+    "journeys": [
+      {
+        "id": "JOURNEY_ID",
+        "type": "GOLD_LOAN",
+        "status": "DISBURSED",
+        "activity_status": "ACTIVE",
+        "decision_status": "APPROVED",
+        "offers": [
+          {
+            "id": "OFFER_ID",
+            "type": "GOLD_LOAN",
+            "accepted": true,
+            "last_installment_date": "2026-03-05T00:00:00Z",
+            "last_installment_status": "PAID",
+            "installments": [
+              {
+                "serial_number": 1,
+                "type": "INSTALLMENT",
+                "amount": "88400",
+                "status": "PAID",
+                "installment_due_date": "2026-03-05T00:00:00Z"
+              },
+              {
+                "serial_number": 2,
+                "type": "INSTALLMENT",
+                "amount": "88400",
+                "status": "OVERDUE",
+                "installment_due_date": "2026-04-05T00:00:00Z"
+              }
+            ]
+          }
+        ],
+        "fulfillments": [
+          {
+            "id": "FUL_1",
+            "type": "LOAN",
+            "mode": "OFFLINE",
+            "selected_location_id": "L2",
+            "state": {
+              "code": "DISBURSED"
+            },
+            "agent": {
+              "name": "Rohan Kumar",
+              "phone": "+919999999999"
+            }
+          }
+        ]
+      }
+    ]
+  }
 }
 ```
-
-### 7. `select` (submit amount/term + choose location)
-
-```json
-{
-  action: `select`,
-  transaction_id: // Same journey transaction.
-  message: {
-    order: {
-      provider: {
-        id: // Selected provider ID.
-      },
-      items: [
-        {
-          id: // Gold Loan item.
-          location_ids: [
-            // One selected location ID. *Example:* `L2`
-          ],
-          xinput: {
-            form: {},
-            form_response: {
-              status: `SUCCESS`,
-              submission_id: // Form submission reference ID.
-            },
-          },
-        },
-      ],
-    },
-  },
-}
-```
-
-### 8. `on_select` (updated offer + fulfillment agent + next form)
-
-```json
-{
-  action: `on_select`,
-  transaction_id: // Same journey transaction.
-  message: {
-    order: {
-      provider: {
-        id: // Selected provider ID.
-      },
-      items: [
-        {
-          id: // Gold Loan item.
-          location_ids: [
-            // Same selected location ID.
-          ],
-          xinput: {
-            head: {
-              descriptor: { name: `JOURNEY_OFFLINE` },
-              headings: [`SET_LOAN_AMOUNT`, `JOURNEY_OFFLINE`],
-            },
-            form: {
-              mime_type: `text/html`,
-              url: // Hosted form URL for next step.
-            },
-            required: true,
-          },
-        },
-      ],
-      fulfillments: [
-        {
-          type: `LOAN`,
-          agent: {
-            person: {
-              name: // Field agent / inspector name.
-            },
-            contact: {
-              phone: // Field agent / inspector contact number.
-            },
-          },
-        },
-      ],
-      quote: {
-        id: // Lead / quote identifier.
-        price: {
-          currency: `INR`,
-          value: // Updated value after borrower amount selection.
-        },
-      },
-    },
-  },
-}
-```
-
-### 9. `form`
-
-```json
-{
-  purpose: `Collect KYC / bank details / e-mandate / e-sign`,
-  flow: {
-    mode: `online` | `offline`,
-    redirects: [
-      // KYC page, mandate page, e-sign page, etc.
-    ],
-  },
-}
-```
-
-### 10. `on_status` (form status update)
-
-```json
-{
-  action: `on_status`,
-  transaction_id: // Same journey transaction.
-  message: {
-    order: {
-      items: [
-        {
-          id: // Gold Loan item.
-          xinput: {
-            form: {},
-            form_response: {
-              status: `OFFLINE_PENDING`,
-              submission_id: // Form submission reference ID.
-            },
-          },
-        },
-      ],
-      fulfillments: [
-        {
-          type: `LOAN`,
-          agent: {
-            person: {
-              name: // Inspector/agent assigned.
-            },
-            contact: {
-              phone: // Inspector/agent contact.
-            },
-          },
-        },
-      ],
-    },
-  },
-}
-```
-
-### 11. `status` (borrower asks latest status)
-
-```json
-{
-  action: `status`,
-  transaction_id: // Same journey transaction.
-  message: {
-    ref_id: // Reference ID for the journey/order.
-  },
-}
-```
-
-### 12. `on_status` (latest status response)
-
-```json
-{
-  action: `on_status`,
-  transaction_id: // Same journey transaction.
-  message: {
-    order: {
-      items: [
-        {
-          id: // Gold Loan item.
-          xinput: {
-            form: {},
-            form_response: {
-              status: `COMPLETED`,
-              submission_id: // Form submission reference ID.
-            },
-          },
-        },
-      ],
-      quote: {
-        id: // Lead / quote identifier.
-        price: {
-          currency: `INR`,
-          value: // Latest value.
-        },
-      },
-    },
-  },
-}
-```
-
-### 13. `init`
-
-```json
-{
-  action: `init`,
-  transaction_id: // Same journey transaction.
-  message: {
-    order: {
-      provider: {
-        id: // Selected provider ID.
-      },
-      items: [
-        {
-          id: // Gold Loan item.
-          xinput: {
-            form: {},
-            form_response: {
-              status: `SUCCESS`,
-              submission_id: // Form submission reference ID.
-            },
-          },
-        },
-      ],
-      payments: [
-        {
-          id: // Payment ID.
-          collected_by: `BPP`,
-          type: `ON_ORDER`,
-          status: `NOT-PAID`,
-          params: {
-            bank_code: // Borrower bank code.
-            bank_account_number: // Borrower account number.
-            virtual_payment_address: // Borrower VPA.
-          },
-        },
-      ],
-    },
-  },
-}
-```
-
-### 14. `on_init`
-
-```json
-{
-  action: `on_init`,
-  transaction_id: // Same journey transaction.
-  message: {
-    order: {
-      id: // Finalized order/lead ID.
-      quote: {
-        id: // Quote ID.
-        price: {
-          currency: `INR`,
-          value: // Total payable.
-        },
-      },
-      fulfillments: [
-        {
-          type: `LOAN`,
-          customer: {
-            person: {
-              name: // Borrower name.
-            },
-            contact: {
-              phone: // Borrower contact number.
-              email: // Borrower email.
-            },
-          },
-          agent: {
-            person: {
-              name: // Assigned inspection/disbursal agent.
-            },
-            contact: {
-              phone: // Assigned agent contact.
-            },
-          },
-          state: {
-            descriptor: {
-              code: `SANCTIONED`,
-            },
-          },
-        },
-      ],
-      payments: [
-        {
-          id: // Upfront payment ID.
-          type: `ON_ORDER`,
-          status: `NOT-PAID`,
-          collected_by: `BPP`,
-        },
-        {
-          id: // Installment payment ID.
-          type: `POST_FULFILLMENT`,
-          status: `NOT-PAID`,
-          params: {
-            amount: // Installment amount.
-            currency: `INR`,
-          },
-          time: {
-            label: `INSTALLMENT`,
-            range: {
-              start: // Installment start datetime.
-              end: // Installment end datetime.
-            },
-          },
-        },
-      ],
-      cancellation_terms: [
-        {
-          fulfillment_state: {
-            descriptor: { code: `SANCTIONED` },
-          },
-          cancellation_fee: {
-            percentage: // Cancellation fee in sanctioned state.
-          },
-        },
-        {
-          fulfillment_state: {
-            descriptor: { code: `DISBURSED` },
-          },
-          cancellation_fee: {
-            percentage: // Cancellation fee in disbursed state.
-          },
-        },
-      ],
-    },
-  },
-}
-```
-
-### 15. `confirm`
-
-```json
-{
-  action: `confirm`,
-  transaction_id: // Same journey transaction.
-  message: {
-    order: {
-      provider: {
-        id: // Selected provider ID.
-      },
-      items: [
-        {
-          id: // Gold Loan item.
-        },
-      ],
-      payments: [
-        {
-          id: // Payment ID.
-          collected_by: `BPP`,
-          type: `ON_ORDER`,
-          status: `NOT-PAID`,
-        },
-      ],
-    },
-  },
-}
-```
-
-### 16. `on_confirm`
-
-```json
-{
-  action: `on_confirm`,
-  transaction_id: // Same journey transaction.
-  message: {
-    order: {
-      id: // Final order ID.
-      fulfillments: [
-        {
-          type: `LOAN`,
-          agent: {
-            person: {
-              name: // Final assigned field agent.
-            },
-            contact: {
-              phone: // Final assigned field agent phone.
-            },
-          },
-          state: {
-            descriptor: {
-              code: `DISBURSED`,
-            },
-          },
-        },
-      ],
-      documents: [
-        {
-          descriptor: {
-            code: `LOAN_AGREEMENT`,
-            name: `Loan Agreement Document`,
-          },
-          mime_type: `application/pdf`,
-          url: // Agreement URL.
-        },
-        {
-          descriptor: {
-            code: `LOAN_CANCELLATION`,
-            name: `Loan Cancellation Document`,
-          },
-          mime_type: `application/pdf`,
-          url: // Cancellation document URL.
-        },
-      ],
-    },
-  },
-}
-```
-
-## Gold Loan Personal Details Contract
-
-```json
-{
-  userType: {
-    required: true,
-    values: [`individual`, `non-individual`],
-    default: `individual`,
-  },
-  pan: { required: true },
-  fullName: { required: true },
-  constitution: { required: `for non-individual` },
-  gender: { required: `for individual`, values: [`male`, `female`, `transgender`] },
-  employmentType: { required: `for individual`, values: [`salaried`, `selfEmployed`] },
-  dobOrDoi: { required: true },
-  annualIncome: { required: true },
-  mobileNumber: { required: true },
-  email: { required: false },
-  address: { required: false },
-  pincode: { required: true },
-  city: { required: false },
-  state: { required: false },
-  jewelleryType: {
-    required: true,
-    values: [
-      `Necklaces`,
-      `Chains`,
-      `Rings`,
-      `Bracelets`,
-      `Bangles`,
-      `Studs`,
-      `Gold Coins`,
-      `Others`,
-    ],
-  },
-  jewelleryWeightGrams: { required: true },
-  endUse: {
-    required: true,
-    values: [
-      `Marriage`,
-      `Family Functions`,
-      `Medical Treatment and Emergencies`,
-      `Travel, Education Expenses`,
-      `Business Expansion`,
-      `Agriculture and Farm-Related Needs`,
-      `Purchase of Equipment`,
-      `Others`,
-    ],
-  },
-  bureauConsent: { required: true },
-  aaHandle: { required: false },
-}
-```
-
-## Gold Grams to Amount Guidance
-
-```text
-eligible_loan_amount = jewellery_weight_grams
-                     * purity_factor
-                     * avg_gold_price_per_gram_last_30_days
-                     * lender_ltv
-```
-
-Use server-side calculation and persist audit logs for each borrower transaction.
