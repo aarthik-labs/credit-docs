@@ -3,27 +3,23 @@ title: Request-Response Model (Gold Loan)
 description: Gold Loan request-response model for hosted journey integrations.
 ---
 
-# Request-Response Model
-
-Credit SDK by Aarthik Labs
-
-## Scope
-This is the Gold Loan request-response model for hosted journey integrations. It follows the same integration style as your existing RR-model docs and uses Gold-specific fields and lifecycle semantics.
+This document defines the Gold Loan request-response model for hosted journey integrations.
+It follows the same integration style as the Personal Loan journey and adds Gold Loan-specific request fields and response snapshots.
 
 ## Request
 
-### `POST /api/lab/sessions` request format
+### `POST /api/lab/sessions` Request Format
 - Send API key in `Authorization: Bearer ${PLATFORM_API_KEY}`.
 - Use `Content-Type: application/json`.
 - Top-level request keys:
-  - `borrowerProviderID` (required)
+  - `borrowerProviderID` (required; must remain stable per mobile number)
   - `journeyType` (required, must be `GOLD_LOAN`)
   - `profile` (required with mandatory profile fields)
   - `workProfile` (optional)
   - `address` (optional)
   - `goldLoan` (optional but strongly recommended)
 
-### Basic initialization
+### Basic Initialization
 ```json
 {
   "borrowerProviderID": "BORROWER-123",
@@ -34,7 +30,7 @@ This is the Gold Loan request-response model for hosted journey integrations. It
 }
 ```
 
-### Extended initialization (recommended)
+### Extended Initialization (Recommended)
 ```json
 {
   "borrowerProviderID": "BORROWER-123",
@@ -68,14 +64,11 @@ This is the Gold Loan request-response model for hosted journey integrations. It
     "purity": "22K",
     "endUse": "medicalTreatmentAndEmergencies",
     "bureauConsent": true,
-    "aaID": "9876543210@finvu",
-    "requestedAmount": "400000",
-    "requestedTenureMonths": 5
   }
 }
 ```
 
-## Request Schema
+### Request Schema
 
 | Field | Type | Required | Accepted values / Notes |
 |---|---|---|---|
@@ -111,20 +104,31 @@ This is the Gold Loan request-response model for hosted journey integrations. It
 | `goldLoan.requestedAmount` | `string \| number` | No | Requested loan amount |
 | `goldLoan.requestedTenureMonths` | `number \| string` | No | Requested tenure in months |
 
-## Borrower Identity Mapping (Important)
+### Borrower Identity Mapping (Important)
 `borrowerProviderID` is your permanent borrower identity key.
 
-Maintain a stable 1:1 mapping:
+Maintain a stable 1:1 mapping between:
 - `mobile number` ↔ `borrowerProviderID`
 
-If this changes for the same mobile number, the platform may treat the borrower as new, which can break resume continuity and post-disbursal tracking.
+#### Example
+If mobile number `8000352223` is initialized with:
+- `borrowerProviderID = 1234`
 
-## Canonical Normalization
+then every future session for the same mobile number must continue to send:
+- `borrowerProviderID = 1234`
+
+#### What Happens If This Changes?
+If you send a different ID for the same mobile number, the platform may treat the borrower as new. This can break resume continuity and post-disbursal tracking.
+
+#### Integration Rule
+Always send the same `borrowerProviderID` for the same mobile number across all sessions.
+
+### Canonical Normalization
 - `gender` normalizes to: `male`, `female`, `transgender`
 - `employmentType` normalizes to: `salaried`, `selfEmployed`
 - `purity` should be sent in canonical uppercase tokens, for example `22K`
 
-## cURL examples
+### cURL Examples
 ```bash
 curl --request POST "${PLATFORM_BASE_URL}/api/lab/sessions" \
   --header "Authorization: Bearer ${PLATFORM_API_KEY}" \
@@ -149,16 +153,18 @@ curl --request POST "${PLATFORM_BASE_URL}/api/lab/sessions" \
       "contactNumber": "9876543210",
       "pan": "ABCDE1234F"
     },
-    "goldLoan": {
-      "jewelleryWeightGrams": 52,
-      "purity": "22K",
-      "endUse": "businessExpansion",
-      "bureauConsent": true
+    goldLoan: {
+      userType: individual,
+      constitution: null,
+      jewelleryWeightGrams: 52,
+      purity: 22K,
+      endUse: medicalTreatmentAndEmergencies,
+      bureauConsent: true,
     }
   }'
 ```
 
-## Notes
+### Notes
 - `borrowerProviderID` is mandatory.
 - `journeyType = GOLD_LOAN` is mandatory for Gold Loan session creation.
 - `profile.contactNumber` is mandatory.
@@ -166,8 +172,8 @@ curl --request POST "${PLATFORM_BASE_URL}/api/lab/sessions" \
 
 ## Response
 
-### Journey snapshots via postMessage
-The hosted journey posts updates to the parent window. Validate origin and forward to your backend if required.
+### Journey Snapshots via postMessage
+The hosted journey posts snapshot updates to the parent window. Validate origin and forward to your backend if required.
 
 ```tsx
 "use client";
@@ -194,27 +200,29 @@ export function useJourneySnapshots() {
 }
 ```
 
-Validate `event.origin` strictly. Snapshot payloads may contain PII.
+<Callout type="warning" title="Validate origin and protect PII">
+Always validate `event.origin` strictly. Snapshot payloads may contain sensitive borrower data.
+</Callout>
 
-## Common Response Envelope
+### Common Response Envelope
 ```json
 {
-  "tenant_id": "TENANT_ID",
-  "application_id": "APPLICATION_ID",
-  "borrower": {
-    "id": "AL_BORROWER_ID",
-    "tenant_id": "TENANT_ID",
-    "application_id": "APPLICATION_ID",
-    "provider_id": "BORROWER-123",
-    "profile": {
-      "Personal": {
-        "contactNumber": "+919876543210"
+  tenant_id: "TENANT_ID",
+  application_id: "APPLICATION_ID",
+  borrower: {
+    id: "AL_BORROWER_ID",
+    tenant_id: "TENANT_ID",
+    application_id: "APPLICATION_ID",
+    provider_id: "BORROWER-123",
+    profile: {
+      Personal: {
+        contactNumber: "+919876543210"
       },
-      "Work": {},
-      "Address": {},
-      "GoldLoan": {}
+      Work: {},
+      Address: {},
+      GoldLoan: {}
     },
-    "journeys": []
+    journeys: []
   }
 }
 ```
@@ -224,531 +232,944 @@ Validate `event.origin` strictly. Snapshot payloads may contain PII.
 - `journeys[].lenders[].locations[]`: branch/serviceability options exposed by the lender.
 - `journeys[].fulfillments[]`: operational execution objects (selected location, assigned agent, current execution state).
 
-## 1. Journey Started
+### 1. Journey Started
 ```json
 {
-  "tenant_id": "TENANT_ID",
-  "application_id": "APPLICATION_ID",
-  "borrower": {
-    "id": "AL_BORROWER_ID",
-    "provider_id": "BORROWER-123",
-    "profile": {
-      "Personal": {
-        "contactNumber": "+919876543210"
+  tenant_id: string; // Tenant ID shall be provided by AL
+  application_id: string; // Application ID shall be provided by AL
+  borrower: {
+    id: // AL generated borrower ID *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+    tenant_id: string; // Tenant ID shall be provided by AL
+    application_id: string; // Application ID shall be provided by AL
+    provider_id: // Tenant-provided borrower identifier (unique per borrower, usually per mobile number). *Example:* `cust_9876543210`,
+    profile: { // Whatever is shared in the Request, will be passed to the tenant back in the form of Response
+      Personal: {
+        contactNumber: // E.164 format accepted (+91 is the only accepted country code. Post that, 10 digits accepted. Final length should be a max of 13 characters. Authenticated number should only be passed.) *Example:* `+919876543210`,
+      },
+    },
+    journeys: [
+      {}, // This array will contain all the old journeys of the borrower
+      {}, // if the borrower is existing
+      {}, // else it will contain just the newly created journey
+      {
+        id: // Internal ID for this journey (one borrower can have multiple). *Example:* `jrn_1b2c3d4e-55aa-4b21-9c11-7dd2e1b8a0ab`,
+        ondc_transaction_id: // Unique ONDC transaction identifier for protocol-level correlation. *Example:* `c0a8012e-7b2f-4f2a-9e31-2f1e0c3a1a22`,
+        created: // When journey was created. *Example:* `2026-01-05T12:45:00Z`,
+        updated: // Last update timestamp for journey state machine. *Example:* `2026-01-05T13:20:12Z`,
+        tenant_id: string; // Tenant ID shall be provided by AL
+        application_id: string; // Application ID shall be provided by AL
+        borrower_id: // Borrower foreign key for this journey. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+        type: `GOLD_LOAN`,
+        status: `STARTED`,
+        activity_status: "ACTIVE" | "IDLE" | "INACTIVE",
+        decision_status: `PENDING`,
+      },
+    ],
+  }
+}
+```
+
+### 2. Application Data Collected
+```json
+{
+  tenant_id: string; // Tenant ID shall be provided by AL
+  application_id: string; // Application ID shall be provided by AL
+  borrower: {
+    id: // AL generated borrower ID *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+    tenant_id: string; // Tenant ID shall be provided by AL
+    application_id: string; // Application ID shall be provided by AL
+    provider_id: // Tenant-provided borrower identifier (unique per borrower, usually per mobile number). *Example:* `cust_9876543210`,
+    profile: { // Whatever is submitted by the Borrower, will be passed to the tenant back in the form of Response
+      Personal: {
+        panName: // (max 3 words accepted) The borrower’s full name exactly as it appears on their PAN record. *Example:* `Rahul Kumar Sharma`,
+        dob: // this needs to be a valid ISO 8601 date (Example: YYYY-MM-DDThh:mm:ss.000Z — 2026-01-01T11:59:00.018Z (timestamp is optional, a default value of 00:00:00.000 can be used.) *Example:* `1994-08-17T00:00:00.000Z`,
+        gender: // *Example:* `male`, `female` and `transgender`,
+        personalemail: // (should contain at least an "@") *Example:* `rahul.sharma@gmail.com`,
+        pan: // PAN-regex must be followed *Example:* `ABCDE1234F`,
+        contactNumber: // E.164 format accepted (+91 is the only accepted country code. Post that, 10 digits accepted. Final length should be a max of 13 characters. Authenticated number should only be passed.) *Example:* `+919876543210`,
+      },
+      Work: {
+        employmentType: // The borrower’s primary mode of employment or income generation. Used to determine eligibility logic, document requirements, and lender routing (e.g. salaried vs self-employed). *Example:* `salaried`,
+        officialemail: // (should contain at least an "@", should not be a common e-mail like @gmail.com, @hotmail.com, @yahoo.com, etc.). *Example:* `rahul.sharma@acmecorp.in`,
+        income: // (should be a valid positve integer, no commas, ) The borrower’s declared or computed income, expected as a monthly amount. *Example:* `75000`,
+        companyName: // Name of the employer or business entity the borrower is associated with. *Example:* `Acme Technologies Pvt Ltd`,
+        udyamNumber: // Adhere to Udyam Number RegEx. The borrower’s Udyam Registration Number, applicable only for self-employed or MSME borrowers. *Example:* `Udyam-KA-05-0123456`,
+      },
+      Address: {
+        addressL1: // *Example:* `Flat 302, Shanti Apartments`,
+        addressL2: // *Example:* `Near MG Road Metro Station`,
+        city: // *Example:* `Rajkot`,
+        state: // *Example:* `Gujarat`,
+        pincode: // *Example:* `360001`,
+      },
+      GoldLoan: {
+        userType: individual,
+        constitution: null,
+        jewelleryWeightGrams: 52,
+        purity: 22K,
+        endUse: medicalTreatmentAndEmergencies,
+        bureauConsent: true,
+        aaID: 9876543210@finvu,
+        requestedAmount: 400000,
+        requestedTenureMonths: 5
       }
     },
-    "journeys": [
+     journeys: [
+      {}, // This array will contain all the old journeys of the borrower
+      {}, // if the borrower is existing
+      {}, // else it will contain just the newly created journey
       {
-        "id": "JOURNEY_ID",
-        "tenant_id": "TENANT_ID",
-        "application_id": "APPLICATION_ID",
-        "borrower_id": "AL_BORROWER_ID",
-        "type": "GOLD_LOAN",
-        "status": "STARTED",
-        "activity_status": "ACTIVE",
-        "decision_status": "PENDING"
-      }
+        id: // Internal ID for this journey (one borrower can have multiple). *Example:* `jrn_1b2c3d4e-55aa-4b21-9c11-7dd2e1b8a0ab`,
+        ondc_transaction_id: // Unique ONDC transaction identifier for protocol-level correlation. *Example:* `c0a8012e-7b2f-4f2a-9e31-2f1e0c3a1a22`,
+        created: // When journey was created. *Example:* `2026-01-05T12:45:00Z`,
+        updated: // Last update timestamp for journey state machine. *Example:* `2026-01-05T13:20:12Z`,
+        tenant_id: string; // Tenant ID shall be provided by AL
+        application_id: string; // Application ID shall be provided by AL
+        borrower_id: // Borrower foreign key for this journey. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+        type: `GOLD_LOAN`,
+        status: `PROFILED`,
+        activity_status: "ACTIVE" | "IDLE" | "INACTIVE",
+        decision_status: `PENDING`,
+      },
     ]
   }
 }
 ```
 
-## 2. Application Data Collected
-```json
-{
-  "tenant_id": "TENANT_ID",
-  "application_id": "APPLICATION_ID",
-  "borrower": {
-    "id": "AL_BORROWER_ID",
-    "provider_id": "BORROWER-123",
-    "profile": {
-      "Personal": {
-        "panName": "Rahul Sharma",
-        "dob": "1995-06-20T00:00:00.000Z",
-        "gender": "male",
-        "personalemail": "rahul@example.com",
-        "pan": "ABCDE1234F",
-        "contactNumber": "+919876543210"
-      },
-      "Work": {
-        "employmentType": "salaried",
-        "officialemail": "rahul@company.com",
-        "income": "75000",
-        "companyName": "Acme Pvt Ltd",
-        "udyamNumber": null
-      },
-      "Address": {
-        "addressL1": "Flat 301, Sunrise Heights",
-        "addressL2": "MG Road",
-        "city": "Bengaluru",
-        "state": "Karnataka",
-        "pincode": "560001"
-      },
-      "GoldLoan": {
-        "userType": "individual",
-        "constitution": null,
-        "jewelleryWeightGrams": 52,
-        "purity": "22K",
-        "endUse": "medicalTreatmentAndEmergencies",
-        "bureauConsent": true,
-        "aaID": "9876543210@finvu",
-        "requestedAmount": "400000",
-        "requestedTenureMonths": 5
-      }
-    },
-    "journeys": [
-      {
-        "id": "JOURNEY_ID",
-        "type": "GOLD_LOAN",
-        "status": "PROFILED",
-        "activity_status": "ACTIVE",
-        "decision_status": "PENDING"
-      }
-    ]
-  }
-}
-```
-
-## 3. Offered
+### 3. Offered
 If no offer is received, `offers` will be an empty array and status is `NOT_OFFERED`.
 
 ```json
 {
-  "tenant_id": "TENANT_ID",
-  "application_id": "APPLICATION_ID",
-  "borrower": {
-    "id": "AL_BORROWER_ID",
-    "provider_id": "BORROWER-123",
-    "profile": {
-      "Personal": {},
-      "Work": {},
-      "Address": {},
-      "GoldLoan": {
-        "jewelleryWeightGrams": 52,
-        "purity": "22K"
+  tenant_id: string; // Tenant ID shall be provided by AL
+  application_id: string; // Application ID shall be provided by AL
+  borrower: {
+    id: // AL generated borrower ID *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+    tenant_id: string; // Tenant ID shall be provided by AL
+    application_id: string; // Application ID shall be provided by AL
+    provider_id: // Tenant-provided borrower identifier (unique per borrower, usually per mobile number). *Example:* `cust_9876543210`,
+    profile: {
+      Personal: {
+        panName: // (max 3 words accepted) The borrower’s full name exactly as it appears on their PAN record. *Example:* `Rahul Kumar Sharma`,
+        dob: // this needs to be a valid ISO 8601 date (Example: YYYY-MM-DDThh:mm:ss.000Z — 2026-01-01T11:59:00.018Z (timestamp is optional, a default value of 00:00:00.000 can be used.) *Example:* `1994-08-17T00:00:00.000Z`,
+        gender: // *Example:* `male`, `female` and `transgender`,
+        personalemail: // (should contain at least an "@") *Example:* `rahul.sharma@gmail.com`,
+        pan: // PAN-regex must be followed *Example:* `ABCDE1234F`,
+        contactNumber: // E.164 format accepted (+91 is the only accepted country code. Post that, 10 digits accepted. Final length should be a max of 13 characters. Authenticated number should only be passed.) *Example:* `+919876543210`,
+      },
+      Work: {
+        employmentType: // The borrower’s primary mode of employment or income generation. Used to determine eligibility logic, document requirements, and lender routing (e.g. salaried vs self-employed). *Example:* `salaried`,
+        officialemail: // (should contain at least an "@", should not be a common e-mail like @gmail.com, @hotmail.com, @yahoo.com, etc.). *Example:* `rahul.sharma@acmecorp.in`,
+        income: // (should be a valid positve integer, no commas, ) The borrower’s declared or computed income, expected as a monthly amount. *Example:* `75000`,
+        companyName: // Name of the employer or business entity the borrower is associated with. *Example:* `Acme Technologies Pvt Ltd`,
+        udyamNumber: // Adhere to Udyam Number RegEx. The borrower’s Udyam Registration Number, applicable only for self-employed or MSME borrowers. *Example:* `Udyam-KA-05-0123456`,
+      },
+      Address: {
+        addressL1: // *Example:* `Flat 302, Shanti Apartments`,
+        addressL2: // *Example:* `Near MG Road Metro Station`,
+        city: // *Example:* `Rajkot`,
+        state: // *Example:* `Gujarat`,
+        pincode: // *Example:* `360001`,
+      },
+      GoldLoan: {
+        userType: individual,
+        constitution: null,
+        jewelleryWeightGrams: 52,
+        purity: 22K,
+        endUse: medicalTreatmentAndEmergencies,
+        bureauConsent: true,
+        aaID: 9876543210@finvu,
+        requestedAmount: 400000,
+        requestedTenureMonths: 5
       }
     },
-    "journeys": [
+journeys: [
       {
-        "id": "JOURNEY_ID",
-        "type": "GOLD_LOAN",
-        "status": "OFFERED",
-        "activity_status": "ACTIVE",
-        "decision_status": "APPROVED",
-        "lender_mode": "ONLINE",
-        "lenders": [
+        id: // Internal ID for this journey (one borrower can have multiple). *Example:* `jrn_1b2c3d4e-55aa-4b21-9c11-7dd2e1b8a0ab`,
+        ondc_transaction_id: // Unique ONDC transaction identifier for protocol-level correlation. *Example:* `c0a8012e-7b2f-4f2a-9e31-2f1e0c3a1a22`,
+        created: // When journey was created. *Example:* `2026-01-05T12:45:00Z`,
+        updated: // Last update timestamp for journey state machine. *Example:* `2026-01-05T13:20:12Z`,
+        tenant_id: string; // Tenant ID shall be provided by AL
+        application_id: string; // Application ID shall be provided by AL
+        borrower_id: // Borrower foreign key for this journey. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+        type: `GOLD_LOAN`,
+        status: "OFFERED",
+        activity_status: "ACTIVE" | "IDLE" | "INACTIVE",
+        decision_status: "APPROVED" | "NOT-APPROVED",
+        lender_mode: "ONLINE" | "OFFLINE",
+        lenders: [
           {
-            "id": "LENDER_ID",
-            "journey_id": "JOURNEY_ID",
-            "lender_name": "Lender XYZ NBFC",
-            "lender_gro_name": "Priya Menon",
-            "lender_gro_email": "gro@lenderxyz.com",
-            "lender_customer_support_email": "support@lenderxyz.com",
-            "locations": [
-              {
-                "id": "L1",
-                "name": "Mumbai Central Branch",
-                "address": "Fort, Mumbai, Maharashtra 400001",
-                "city": "Mumbai",
-                "state": "Maharashtra",
-                "pincode": "400001",
-                "gps": "18.9322,72.8320"
-              },
-              {
-                "id": "L2",
-                "name": "Mumbai East Branch",
-                "address": "Ghatkopar, Mumbai, Maharashtra 400086",
-                "city": "Mumbai",
-                "state": "Maharashtra",
-                "pincode": "400086",
-                "gps": "19.0854,72.9087"
-              },
-              {
-                "id": "L3",
-                "name": "Mumbai West Branch",
-                "address": "Andheri, Mumbai, Maharashtra 400053",
-                "city": "Mumbai",
-                "state": "Maharashtra",
-                "pincode": "400053",
-                "gps": "19.1197,72.8468"
-              }
-            ]
-          }
+            id: // *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            created: // Lender record created timestamp. *Example:* `2026-01-05T12:50:10Z`,
+            tenant_id: // Tenant partition key. *Example:* `tnt_2f6c1a9b7d`,
+            application_id: // Application partition key. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            borrower_id: // Borrower FK. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            journey_id: // Journey FK. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            offer_id: // Offer FK. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            ondc_transaction_id: // ONDC correlation ID for lender-level interaction. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            data: // *Example:* `[ { "on_search": { "...": "..." } } ]`,
+            lender_name: // Lender name. *Example:* `Lender XYZ NBFC`,
+            lender_gro_name: // Grievance Redressal Officer name (required). *Example:* `Priya Menon`,
+            lender_gro_email: // GRO email. *Example:* `gro@lenderxyz.com`,
+            lender_gro_contact_number: // GRO contact number. *Example:* `+91-80-40001234`,
+            lender_gro_designation: // GRO designation/title. *Example:* `Grievance Redressal Officer`,
+            lender_gro_address: // GRO address. *Example:* `4th Floor, Business Park, Bengaluru, KA 560001`,
+            lender_customer_support_link: // Support URL. *Example:* `https://lenderxyz.com/support`,
+            lender_customer_support_contact_number: // Support number. *Example:* `1800-123-456`,
+            lender_customer_support_email: // Support email. *Example:* `support@lenderxyz.com`,
+          },
+          {
+            id: // *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            created: // Lender record created timestamp. *Example:* `2026-01-05T12:50:10Z`,
+            tenant_id: // Tenant partition key. *Example:* `tnt_2f6c1a9b7d`,
+            application_id: // Application partition key. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            borrower_id: // Borrower FK. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            journey_id: // Journey FK. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            offer_id: // Offer FK. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            ondc_transaction_id: // ONDC correlation ID for lender-level interaction. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            data: // *Example:* `[ { "on_search": { "...": "..." } } ]`,
+            lender_name: // Lender name. *Example:* `Lender XYZ NBFC`,
+            lender_gro_name: // Grievance Redressal Officer name (required). *Example:* `Priya Menon`,
+            lender_gro_email: // GRO email. *Example:* `gro@lenderxyz.com`,
+            lender_gro_contact_number: // GRO contact number. *Example:* `+91-80-40001234`,
+            lender_gro_designation: // GRO designation/title. *Example:* `Grievance Redressal Officer`,
+            lender_gro_address: // GRO address. *Example:* `4th Floor, Business Park, Bengaluru, KA 560001`,
+            lender_customer_support_link: // Support URL. *Example:* `https://lenderxyz.com/support`,
+            lender_customer_support_contact_number: // Support number. *Example:* `1800-123-456`,
+            lender_customer_support_email: // Support email. *Example:* `support@lenderxyz.com`,
+          },
         ],
-        "offers": [
+        offers: [
           {
-            "id": "OFFER_ID",
-            "journey_id": "JOURNEY_ID",
-            "lender_id": "LENDER_ID",
-            "accepted": false,
-            "expired": false,
-            "type": "GOLD_LOAN",
-            "amount_principal": "400000",
-            "amount_total_interest_payable": "42000",
-            "amount_net_disbursed_amount": "396500",
-            "offer_term": "5 months",
-            "interest_rate": "11.50",
-            "interest_type": "Fixed",
-            "annual_percentage_rate": "13.10%",
-            "number_of_installments": "5",
-            "terms_and_conditions_link": "https://lenderxyz.com/tnc/gold-loan",
-            "key_facts_statement_link": "https://lenderxyz.com/kfs/gold-loan",
-            "processing_fees": "1800",
-            "other_charges": "1000",
-            "pledged_gold_weight_grams": "52",
-            "pledged_gold_purity": "22K",
-            "loan_to_value_ratio": "75",
-            "valuation_amount": "533333"
-          }
+            id: // Internal offer record ID. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            created: // Offer created timestamp. *Example:* `2026-01-05T12:55:00Z`,
+            updated: // Offer updated timestamp. *Example:* `2026-01-05T13:10:30Z`,
+            tenant_id: // Tenant partition key. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            application_id: // Application partition key. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            borrower_id: // Borrower FK. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            journey_id: // Journey FK. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            lender_id: // Lender FK for this offer. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            ondc_transaction_id: // Offer-level ONDC correlation ID. *Example:* `0b2c3d4e-5f60-4a7b-8c9d-001122334455`,
+            accepted: false,
+            expired: true | false,
+            type: // *Example:* `GOLD_LOAN`,
+            amount_principal: // Principal amount. *Example:* `200000`,
+            amount_total_interest_payable: // Total interest payable over tenure. *Example:* `24000`,
+            amount_net_disbursed_amount: // *Example:* `196500`,
+            offer_term: // *Example:* `12 months`,
+            interest_rate: // *Example:* `12.50`,
+            interest_type: // *Example:* `Fixed` / `reducing`,
+            annual_percentage_rate: // *Example:* `14.75%`,
+            number_of_installments: // *Example:* `12`,
+            cool_off_period: // *Example:* `3 days`,
+            terms_and_conditions_link: // URL to T&C. *Example:* `https://lenderxyz.com/tnc/loan`,
+            key_facts_statement_link: // URL to KFS. *Example:* `https://lenderxyz.com/kfs/loan`,
+            application_fees: // *Example:* `₹0`,
+            foreclosure_fees: // *Example:* `2%`,
+            interest_rate_conversion_charges: // *Example:* `500 INR`,
+            delay_penalty_fees: // *Example:* `5%`,
+            other_penalty_fees: // *Example:* `1%`,
+            processing_fees: // *Example:* `1800`,
+            other_upfront_charges: // *Example:* `100`,
+            insurance_charges: // *Example:* `100`,
+            other_charges: // *Example:* `1000`,
+          },
+          {
+            id: // Internal offer record ID. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            created: // Offer created timestamp. *Example:* `2026-01-05T12:55:00Z`,
+            updated: // Offer updated timestamp. *Example:* `2026-01-05T13:10:30Z`,
+            tenant_id: // Tenant partition key. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            application_id: // Application partition key. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            borrower_id: // Borrower FK. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            journey_id: // Journey FK. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            lender_id: // Lender FK for this offer. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            ondc_transaction_id: // Offer-level ONDC correlation ID. *Example:* `0b2c3d4e-5f60-4a7b-8c9d-001122334455`,
+            accepted: false,
+            expired: true | false,
+            type: // *Example:* `GOLD_LOAN`,
+            amount_principal: // Principal amount. *Example:* `200000`,
+            amount_total_interest_payable: // Total interest payable over tenure. *Example:* `24000`,
+            amount_net_disbursed_amount: // *Example:* `196500`,
+            offer_term: // *Example:* `12 months`,
+            interest_rate: // *Example:* `12.50`,
+            interest_type: // *Example:* `Fixed` / `reducing`,
+            annual_percentage_rate: // *Example:* `14.75%`,
+            number_of_installments: // *Example:* `12`,
+            cool_off_period: // *Example:* `3 days`,
+            terms_and_conditions_link: // URL to T&C. *Example:* `https://lenderxyz.com/tnc/loan`,
+            key_facts_statement_link: // URL to KFS. *Example:* `https://lenderxyz.com/kfs/loan`,
+            application_fees: // *Example:* `₹0`,
+            foreclosure_fees: // *Example:* `2%`,
+            interest_rate_conversion_charges: // *Example:* `500 INR`,
+            delay_penalty_fees: // *Example:* `5%`,
+            other_penalty_fees: // *Example:* `1%`,
+            processing_fees: // *Example:* `1800`,
+            other_upfront_charges: // *Example:* `100`,
+            insurance_charges: // *Example:* `100`,
+            other_charges: // *Example:* `1000`,
+          },
         ],
-        "fulfillments": [
-          {
-            "id": "FUL_1",
-            "type": "LOAN",
-            "mode": "OFFLINE",
-            "selected_location_id": null,
-            "state": {
-              "code": "LOCATION_SELECTION_PENDING"
-            },
-            "agent": null
-          }
-        ]
-      }
-    ]
-  }
-}
+      },
+    ],
+  },
+};
 ```
 
-### No-offer case
+#### No-Offer Case
 ```json
 {
-  "tenant_id": "TENANT_ID",
-  "application_id": "APPLICATION_ID",
-  "borrower": {
-    "id": "AL_BORROWER_ID",
-    "provider_id": "BORROWER-123",
-    "journeys": [
-      {
-        "id": "JOURNEY_ID",
-        "type": "GOLD_LOAN",
-        "status": "NOT_OFFERED",
-        "activity_status": "ACTIVE",
-        "decision_status": "NOT-APPROVED",
-        "lenders": [
-          {
-            "id": "LENDER_ID",
-            "lender_name": "Lender XYZ NBFC",
-            "locations": [
-              {
-                "id": "L1",
-                "name": "Mumbai Central Branch"
-              }
-            ]
-          }
-        ],
-        "offers": []
+  tenant_id: string; // Tenant ID shall be provided by AL
+  application_id: string; // Application ID shall be provided by AL
+  borrower: {
+    id: // AL generated borrower ID *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+    tenant_id: string; // Tenant ID shall be provided by AL
+    application_id: string; // Application ID shall be provided by AL
+    provider_id: // Tenant-provided borrower identifier (unique per borrower, usually per mobile number). *Example:* `cust_9876543210`,
+    profile: {
+      Personal: {
+        panName: // (max 3 words accepted) The borrower’s full name exactly as it appears on their PAN record. *Example:* `Rahul Kumar Sharma`,
+        dob: // this needs to be a valid ISO 8601 date (Example: YYYY-MM-DDThh:mm:ss.000Z — 2026-01-01T11:59:00.018Z (timestamp is optional, a default value of 00:00:00.000 can be used.) *Example:* `1994-08-17T00:00:00.000Z`,
+        gender: // *Example:* `male`, `female` and `transgender`,
+        personalemail: // (should contain at least an "@") *Example:* `rahul.sharma@gmail.com`,
+        pan: // PAN-regex must be followed *Example:* `ABCDE1234F`,
+        contactNumber: // E.164 format accepted (+91 is the only accepted country code. Post that, 10 digits accepted. Final length should be a max of 13 characters. Authenticated number should only be passed.) *Example:* `+919876543210`,
+      },
+      Work: {
+        employmentType: // The borrower’s primary mode of employment or income generation. Used to determine eligibility logic, document requirements, and lender routing (e.g. salaried vs self-employed). *Example:* `salaried`,
+        officialemail: // (should contain at least an "@", should not be a common e-mail like @gmail.com, @hotmail.com, @yahoo.com, etc.). *Example:* `rahul.sharma@acmecorp.in`,
+        income: // (should be a valid positve integer, no commas, ) The borrower’s declared or computed income, expected as a monthly amount. *Example:* `75000`,
+        companyName: // Name of the employer or business entity the borrower is associated with. *Example:* `Acme Technologies Pvt Ltd`,
+        udyamNumber: // Adhere to Udyam Number RegEx. The borrower’s Udyam Registration Number, applicable only for self-employed or MSME borrowers. *Example:* `Udyam-KA-05-0123456`,
+      },
+      Address: {
+        addressL1: // *Example:* `Flat 302, Shanti Apartments`,
+        addressL2: // *Example:* `Near MG Road Metro Station`,
+        city: // *Example:* `Rajkot`,
+        state: // *Example:* `Gujarat`,
+        pincode: // *Example:* `360001`,
+      },
+      GoldLoan: {
+        userType: individual,
+        constitution: null,
+        jewelleryWeightGrams: 52,
+        purity: 22K,
+        endUse: medicalTreatmentAndEmergencies,
+        bureauConsent: true,
+        aaID: 9876543210@finvu,
+        requestedAmount: 400000,
+        requestedTenureMonths: 5
       }
-    ]
-  }
-}
+    },
+    journeys: [
+      {
+        id: // Internal ID for this journey (one borrower can have multiple). *Example:* `jrn_1b2c3d4e-55aa-4b21-9c11-7dd2e1b8a0ab`,
+        ondc_transaction_id: // Unique ONDC transaction identifier for protocol-level correlation. *Example:* `c0a8012e-7b2f-4f2a-9e31-2f1e0c3a1a22`,
+        created: // When journey was created. *Example:* `2026-01-05T12:45:00Z`,
+        updated: // Last update timestamp for journey state machine. *Example:* `2026-01-05T13:20:12Z`,
+        tenant_id: string; // Tenant ID shall be provided by AL
+        application_id: string; // Application ID shall be provided by AL
+        borrower_id: // Borrower foreign key for this journey. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+        type: `GOLD_LOAN`,
+        status: "NOT_OFFERED",
+        activity_status: "ACTIVE" | "IDLE" | "INACTIVE",
+        decision_status: "APPROVED" | "NOT-APPROVED",
+        lender_mode: "ONLINE" | "OFFLINE",
+        lenders: [
+          {
+            id: // *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            created: // Lender record created timestamp. *Example:* `2026-01-05T12:50:10Z`,
+            tenant_id: // Tenant partition key. *Example:* `tnt_2f6c1a9b7d`,
+            application_id: // Application partition key. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            borrower_id: // Borrower FK. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            journey_id: // Journey FK. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            offer_id: // Offer FK. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            ondc_transaction_id: // ONDC correlation ID for lender-level interaction. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            data: // *Example:* `[ { "on_search": { "...": "..." } } ]`,
+            lender_name: // Lender name. *Example:* `Lender XYZ NBFC`,
+            lender_gro_name: // Grievance Redressal Officer name (required). *Example:* `Priya Menon`,
+            lender_gro_email: // GRO email. *Example:* `gro@lenderxyz.com`,
+            lender_gro_contact_number: // GRO contact number. *Example:* `+91-80-40001234`,
+            lender_gro_designation: // GRO designation/title. *Example:* `Grievance Redressal Officer`,
+            lender_gro_address: // GRO address. *Example:* `4th Floor, Business Park, Bengaluru, KA 560001`,
+            lender_customer_support_link: // Support URL. *Example:* `https://lenderxyz.com/support`,
+            lender_customer_support_contact_number: // Support number. *Example:* `1800-123-456`,
+            lender_customer_support_email: // Support email. *Example:* `support@lenderxyz.com`,
+          },
+        ],
+        offers: [],
+      },
+    ],
+  },
+};
 ```
 
-## 4. Offer Selected
+### 4. Offer Selected
 ```json
 {
-  "tenant_id": "TENANT_ID",
-  "application_id": "APPLICATION_ID",
-  "borrower": {
-    "id": "AL_BORROWER_ID",
-    "provider_id": "BORROWER-123",
-    "journeys": [
-      {
-        "id": "JOURNEY_ID",
-        "type": "GOLD_LOAN",
-        "status": "OFFER_SELECTED",
-        "activity_status": "ACTIVE",
-        "decision_status": "APPROVED",
-        "borrower_preferred_amount": "400000",
-        "borrower_preferred_tenure": "5",
-        "selected_location_id": "L2",
-        "lender_mode": "ONLINE",
-        "lenders": [
-          {
-            "id": "LENDER_ID",
-            "lender_name": "Lender XYZ NBFC",
-            "locations": [
-              {
-                "id": "L1",
-                "name": "Mumbai Central Branch"
-              },
-              {
-                "id": "L2",
-                "name": "Mumbai East Branch"
-              },
-              {
-                "id": "L3",
-                "name": "Mumbai West Branch"
-              }
-            ]
-          }
-        ],
-        "offers": [
-          {
-            "id": "OFFER_ID",
-            "type": "GOLD_LOAN",
-            "accepted": false,
-            "expired": false,
-            "amount_principal": "400000"
-          }
-        ],
-        "fulfillments": [
-          {
-            "id": "FUL_1",
-            "type": "LOAN",
-            "mode": "OFFLINE",
-            "selected_location_id": "L2",
-            "state": {
-              "code": "LOCATION_SELECTED"
-            },
-            "agent": null
-          }
-        ]
+  tenant_id: string; // Tenant ID shall be provided by AL
+  application_id: string; // Application ID shall be provided by AL
+  borrower: {
+    id: // AL generated borrower ID *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+    tenant_id: string; // Tenant ID shall be provided by AL
+    application_id: string; // Application ID shall be provided by AL
+    provider_id: // Tenant-provided borrower identifier (unique per borrower, usually per mobile number). *Example:* `cust_9876543210`,
+    profile: {
+      Personal: {
+        panName: // (max 3 words accepted) The borrower’s full name exactly as it appears on their PAN record. *Example:* `Rahul Kumar Sharma`,
+        dob: // this needs to be a valid ISO 8601 date (Example: YYYY-MM-DDThh:mm:ss.000Z — 2026-01-01T11:59:00.018Z (timestamp is optional, a default value of 00:00:00.000 can be used.) *Example:* `1994-08-17T00:00:00.000Z`,
+        gender: // *Example:* `male`, `female` and `transgender`,
+        personalemail: // (should contain at least an "@") *Example:* `rahul.sharma@gmail.com`,
+        pan: // PAN-regex must be followed *Example:* `ABCDE1234F`,
+        contactNumber: // E.164 format accepted (+91 is the only accepted country code. Post that, 10 digits accepted. Final length should be a max of 13 characters. Authenticated number should only be passed.) *Example:* `+919876543210`,
+      },
+      Work: {
+        employmentType: // The borrower’s primary mode of employment or income generation. Used to determine eligibility logic, document requirements, and lender routing (e.g. salaried vs self-employed). *Example:* `salaried`,
+        officialemail: // (should contain at least an "@", should not be a common e-mail like @gmail.com, @hotmail.com, @yahoo.com, etc.). *Example:* `rahul.sharma@acmecorp.in`,
+        income: // (should be a valid positve integer, no commas, ) The borrower’s declared or computed income, expected as a monthly amount. *Example:* `75000`,
+        companyName: // Name of the employer or business entity the borrower is associated with. *Example:* `Acme Technologies Pvt Ltd`,
+        udyamNumber: // Adhere to Udyam Number RegEx. The borrower’s Udyam Registration Number, applicable only for self-employed or MSME borrowers. *Example:* `Udyam-KA-05-0123456`,
+      },
+      Address: {
+        addressL1: // *Example:* `Flat 302, Shanti Apartments`,
+        addressL2: // *Example:* `Near MG Road Metro Station`,
+        city: // *Example:* `Rajkot`,
+        state: // *Example:* `Gujarat`,
+        pincode: // *Example:* `360001`,
+      },
+      goldLoan: {
+        userType: individual | non-individual,
+        constitution: null,
+        jewelleryWeightGrams: 52,
+        purity: 22K,
+        endUse: medicalTreatmentAndEmergencies,
+        bureauConsent: true,
       }
-    ]
-  }
-}
+    },
+    journeys: [
+      {
+        id: // Internal ID for this journey (one borrower can have multiple). *Example:* `jrn_1b2c3d4e-55aa-4b21-9c11-7dd2e1b8a0ab`,
+        ondc_transaction_id: // Unique ONDC transaction identifier for protocol-level correlation. *Example:* `c0a8012e-7b2f-4f2a-9e31-2f1e0c3a1a22`,
+        created: // When journey was created. *Example:* `2026-01-05T12:45:00Z`,
+        updated: // Last update timestamp for journey state machine. *Example:* `2026-01-05T13:20:12Z`,
+        tenant_id: string; // Tenant ID shall be provided by AL
+        application_id: string; // Application ID shall be provided by AL
+        borrower_id: // Borrower foreign key for this journey. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+        type: `GOLD_LOAN`,
+        status: "OFFER_SELECTED",
+        activity_status: "ACTIVE" | "IDLE" | "INACTIVE",
+        decision_status: "APPROVED" | "NOT-APPROVED",
+        borrower_preferred_amount: // Borrower’s preferred loan amount. *Example:* `200000`,
+        borrower_preferred_tenure: // Borrower’s preferred tenure in months. *Example:* `12`,
+        lender_mode: "ONLINE" | "OFFLINE",
+        lenders: [
+          {
+            id: // *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            created: // Lender record created timestamp. *Example:* `2026-01-05T12:50:10Z`,
+            tenant_id: // Tenant partition key. *Example:* `tnt_2f6c1a9b7d`,
+            application_id: // Application partition key. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            borrower_id: // Borrower FK. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            journey_id: // Journey FK. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            offer_id: // Offer FK. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            ondc_transaction_id: // ONDC correlation ID for lender-level interaction. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            data: // *Example:* `[ { "on_search": { "...": "..." } } ]`,
+            lender_name: // Lender name. *Example:* `Lender XYZ NBFC`,
+            lender_gro_name: // Grievance Redressal Officer name (required). *Example:* `Priya Menon`,
+            lender_gro_email: // GRO email. *Example:* `gro@lenderxyz.com`,
+            lender_gro_contact_number: // GRO contact number. *Example:* `+91-80-40001234`,
+            lender_gro_designation: // GRO designation/title. *Example:* `Grievance Redressal Officer`,
+            lender_gro_address: // GRO address. *Example:* `4th Floor, Business Park, Bengaluru, KA 560001`,
+            lender_customer_support_link: // Support URL. *Example:* `https://lenderxyz.com/support`,
+            lender_customer_support_contact_number: // Support number. *Example:* `1800-123-456`,
+            lender_customer_support_email: // Support email. *Example:* `support@lenderxyz.com`,
+          },
+        ],
+        offers: [
+          {
+            id: // Internal offer record ID. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            created: // Offer created timestamp. *Example:* `2026-01-05T12:55:00Z`,
+            updated: // Offer updated timestamp. *Example:* `2026-01-05T13:10:30Z`,
+            tenant_id: // Tenant partition key. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            application_id: // Application partition key. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            borrower_id: // Borrower FK. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            journey_id: // Journey FK. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            lender_id: // Lender FK for this offer. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            ondc_transaction_id: // Offer-level ONDC correlation ID. *Example:* `0b2c3d4e-5f60-4a7b-8c9d-001122334455`,
+            accepted: false,
+            expired: false,
+            type: // *Example:* `GOLD_LOAN`,
+            amount_principal: // Principal amount. *Example:* `200000`,
+            amount_total_interest_payable: // Total interest payable over tenure. *Example:* `24000`,
+            amount_net_disbursed_amount: // *Example:* `196500`,
+            offer_term: // *Example:* `12 months`,
+            interest_rate: // *Example:* `12.50`,
+            interest_type: // *Example:* `Fixed` / `reducing`,
+            annual_percentage_rate: // *Example:* `14.75%`,
+            number_of_installments: // *Example:* `12`,
+            cool_off_period: // *Example:* `3 days`,
+            terms_and_conditions_link: // URL to T&C. *Example:* `https://lenderxyz.com/tnc/loan`,
+            key_facts_statement_link: // URL to KFS. *Example:* `https://lenderxyz.com/kfs/loan`,
+            application_fees: // *Example:* `₹0`,
+            foreclosure_fees: // *Example:* `2%`,
+            interest_rate_conversion_charges: // *Example:* `500 INR`,
+            delay_penalty_fees: // *Example:* `5%`,
+            other_penalty_fees: // *Example:* `1%`,
+            processing_fees: // *Example:* `1800`,
+            other_upfront_charges: // *Example:* `100`,
+            insurance_charges: // *Example:* `100`,
+            other_charges: // *Example:* `1000`,
+            ltv_ratio: 75%,//Loan to Value Ratio
+            location_ids: [
+              "L1", //locations at which this offer is available
+              "L2",
+              "L3"
+            ],
+          },
+        ],
+      },
+    ],
+    locations: [
+      {
+        id: L1,
+        gps: 28.574909, 77.194029,
+        name: Mumbai Central,
+        address: 123 Marine Drive, Mumbai, Maharashtra,
+        area_code: 400001
+      },
+      {
+        id: L2,
+        gps: 28.584909, 77.134029,
+        name: Mumbai East,
+        address: 162 Dadar, Mumbai, Maharashtra,
+        area_code: 400001
+      },
+      {
+        id: L3,
+        gps: 28.584909, 77.134029,
+        name: Mumbai West,
+        address: 182 Juhu, Mumbai, Maharashtra,
+        area_code: 400001
+      }
+    ],
+  },
+};
+
 ```
 
-## 5. Offer Accepted
+### 5. Offer Accepted
 ```json
 {
-  "tenant_id": "TENANT_ID",
-  "application_id": "APPLICATION_ID",
-  "borrower": {
-    "id": "AL_BORROWER_ID",
-    "provider_id": "BORROWER-123",
-    "journeys": [
-      {
-        "id": "JOURNEY_ID",
-        "type": "GOLD_LOAN",
-        "status": "OFFER_ACCEPTED",
-        "activity_status": "ACTIVE",
-        "decision_status": "APPROVED",
-        "borrower_preferred_amount": "400000",
-        "borrower_preferred_tenure": "5",
-        "lender_mode": "ONLINE",
-        "offers": [
-          {
-            "id": "OFFER_ID",
-            "type": "GOLD_LOAN",
-            "accepted": true,
-            "expired": false,
-            "amount_principal": "400000"
-          }
-        ],
-        "fulfillments": [
-          {
-            "id": "FUL_1",
-            "type": "LOAN",
-            "mode": "OFFLINE",
-            "selected_location_id": "L2",
-            "state": {
-              "code": "SANCTIONED"
-            },
-            "agent": {
-              "name": "Rohan Kumar",
-              "phone": "+919999999999"
-            }
-          }
-        ]
+  tenant_id: string; // Tenant ID shall be provided by AL
+  application_id: string; // Application ID shall be provided by AL
+  borrower: {
+    id: // AL generated borrower ID *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+    tenant_id: string; // Tenant ID shall be provided by AL
+    application_id: string; // Application ID shall be provided by AL
+    provider_id: // Tenant-provided borrower identifier (unique per borrower, usually per mobile number). *Example:* `cust_9876543210`,
+    profile: {
+      Personal: {
+        panName: // (max 3 words accepted) The borrower’s full name exactly as it appears on their PAN record. *Example:* `Rahul Kumar Sharma`,
+        dob: // this needs to be a valid ISO 8601 date (Example: YYYY-MM-DDThh:mm:ss.000Z — 2026-01-01T11:59:00.018Z (timestamp is optional, a default value of 00:00:00.000 can be used.) *Example:* `1994-08-17T00:00:00.000Z`,
+        gender: // *Example:* `male`, `female` and `transgender`,
+        personalemail: // (should contain at least an "@") *Example:* `rahul.sharma@gmail.com`,
+        pan: // PAN-regex must be followed *Example:* `ABCDE1234F`,
+        contactNumber: // E.164 format accepted (+91 is the only accepted country code. Post that, 10 digits accepted. Final length should be a max of 13 characters. Authenticated number should only be passed.) *Example:* `+919876543210`,
+      },
+      Work: {
+        employmentType: // The borrower’s primary mode of employment or income generation. Used to determine eligibility logic, document requirements, and lender routing (e.g. salaried vs self-employed). *Example:* `salaried`,
+        officialemail: // (should contain at least an "@", should not be a common e-mail like @gmail.com, @hotmail.com, @yahoo.com, etc.). *Example:* `rahul.sharma@acmecorp.in`,
+        income: // (should be a valid positve integer, no commas, ) The borrower’s declared or computed income, expected as a monthly amount. *Example:* `75000`,
+        companyName: // Name of the employer or business entity the borrower is associated with. *Example:* `Acme Technologies Pvt Ltd`,
+        udyamNumber: // Adhere to Udyam Number RegEx. The borrower’s Udyam Registration Number, applicable only for self-employed or MSME borrowers. *Example:* `Udyam-KA-05-0123456`,
+      },
+      Address: {
+        addressL1: // *Example:* `Flat 302, Shanti Apartments`,
+        addressL2: // *Example:* `Near MG Road Metro Station`,
+        city: // *Example:* `Rajkot`,
+        state: // *Example:* `Gujarat`,
+        pincode: // *Example:* `360001`,
+      },
+      goldLoan: {
+        userType: individual,
+        constitution: null,
+        jewelleryWeightGrams: 52,
+        purity: 22K,
+        endUse: medicalTreatmentAndEmergencies,
+        bureauConsent: true,
       }
-    ]
-  }
-}
+    },
+    journeys: [
+      {
+        id: // Internal ID for this journey (one borrower can have multiple). *Example:* `jrn_1b2c3d4e-55aa-4b21-9c11-7dd2e1b8a0ab`,
+        ondc_transaction_id: // Unique ONDC transaction identifier for protocol-level correlation. *Example:* `c0a8012e-7b2f-4f2a-9e31-2f1e0c3a1a22`,
+        created: // When journey was created. *Example:* `2026-01-05T12:45:00Z`,
+        updated: // Last update timestamp for journey state machine. *Example:* `2026-01-05T13:20:12Z`,
+        tenant_id: string; // Tenant ID shall be provided by AL
+        application_id: string; // Application ID shall be provided by AL
+        borrower_id: // Borrower foreign key for this journey. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+        type: `GOLD_LOAN`,
+        status: "OFFER_ACCEPTED",
+        activity_status: "ACTIVE" | "IDLE" | "INACTIVE",
+        decision_status: "APPROVED" | "NOT-APPROVED",
+        borrower_preferred_amount: // Borrower’s preferred loan amount. *Example:* `200000`,
+        borrower_preferred_tenure: // Borrower’s preferred tenure in months. *Example:* `12`,
+        lender_mode: "ONLINE" | "OFFLINE",
+        lenders: [
+          {
+            id: // *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            created: // Lender record created timestamp. *Example:* `2026-01-05T12:50:10Z`,
+            tenant_id: // Tenant partition key. *Example:* `tnt_2f6c1a9b7d`,
+            application_id: // Application partition key. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            borrower_id: // Borrower FK. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            journey_id: // Journey FK. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            offer_id: // Offer FK. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            ondc_transaction_id: // ONDC correlation ID for lender-level interaction. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            data: // *Example:* `[ { "on_search": { "...": "..." } } ]`,
+            lender_name: // Lender name. *Example:* `Lender XYZ NBFC`,
+            lender_gro_name: // Grievance Redressal Officer name (required). *Example:* `Priya Menon`,
+            lender_gro_email: // GRO email. *Example:* `gro@lenderxyz.com`,
+            lender_gro_contact_number: // GRO contact number. *Example:* `+91-80-40001234`,
+            lender_gro_designation: // GRO designation/title. *Example:* `Grievance Redressal Officer`,
+            lender_gro_address: // GRO address. *Example:* `4th Floor, Business Park, Bengaluru, KA 560001`,
+            lender_customer_support_link: // Support URL. *Example:* `https://lenderxyz.com/support`,
+            lender_customer_support_contact_number: // Support number. *Example:* `1800-123-456`,
+            lender_customer_support_email: // Support email. *Example:* `support@lenderxyz.com`,
+          },
+        ],
+
+        offers: [ // Offer array may be updated with the revised offer amount (borrower preferred).
+          {
+            id: // Internal offer record ID. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            created: // Offer created timestamp. *Example:* `2026-01-05T12:55:00Z`,
+            updated: // Offer updated timestamp. *Example:* `2026-01-05T13:10:30Z`,
+            tenant_id: // Tenant partition key. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            application_id: // Application partition key. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            borrower_id: // Borrower FK. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            journey_id: // Journey FK. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            lender_id: // Lender FK for this offer. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            ondc_transaction_id: // Offer-level ONDC correlation ID. *Example:* `0b2c3d4e-5f60-4a7b-8c9d-001122334455`,
+            accepted: true,
+            expired: false,
+            type: // *Example:* `GOLD_LOAN`,
+            amount_principal: // Principal amount. *Example:* `200000`,
+            amount_total_interest_payable: // Total interest payable over tenure. *Example:* `24000`,
+            amount_net_disbursed_amount: // *Example:* `196500`,
+            offer_term: // *Example:* `12 months`,
+            interest_rate: // *Example:* `12.50`,
+            interest_type: // *Example:* `Fixed` / `reducing`,
+            annual_percentage_rate: // *Example:* `14.75%`,
+            number_of_installments: // *Example:* `12`,
+            cool_off_period: // *Example:* `3 days`,
+            terms_and_conditions_link: // URL to T&C. *Example:* `https://lenderxyz.com/tnc/loan`,
+            key_facts_statement_link: // URL to KFS. *Example:* `https://lenderxyz.com/kfs/loan`,
+            application_fees: // *Example:* `₹0`,
+            foreclosure_fees: // *Example:* `2%`,
+            interest_rate_conversion_charges: // *Example:* `500 INR`,
+            delay_penalty_fees: // *Example:* `5%`,
+            other_penalty_fees: // *Example:* `1%`,
+            processing_fees: // *Example:* `1800`,
+            other_upfront_charges: // *Example:* `100`,
+            insurance_charges: // *Example:* `100`,
+            other_charges: // *Example:* `1000`,
+            ltv_ratio: 75% //Loan to value ratio,
+            agent: { //Agent information will only be available for accepted loan for offline mode
+              name: //Example: Rajesh Sharma,
+              contact: //Example: +91-99xx99xx99xx
+            },
+          },
+        ],
+      },
+    ],
+  },
+};
 ```
 
-## 6. Lender Redirected
+### 6. Lender Redirected
 ```json
 {
-  "tenant_id": "TENANT_ID",
-  "application_id": "APPLICATION_ID",
-  "borrower": {
-    "id": "AL_BORROWER_ID",
-    "provider_id": "BORROWER-123",
-    "journeys": [
-      {
-        "id": "JOURNEY_ID",
-        "type": "GOLD_LOAN",
-        "status": "LENDER_REDIRECTED",
-        "activity_status": "ACTIVE",
-        "decision_status": "APPROVED",
-        "lender_mode": "ONLINE",
-        "kyc_status": "PENDING",
-        "kyc_attempts": 1,
-        "emandate_status": "PENDING",
-        "emandate_attempts": 0,
-        "esign_status": "PENDING",
-        "esign_attempts": 0,
-        "change_in_offer": false,
-        "borrower_preferred_amount": "400000",
-        "borrower_preferred_tenure": "5",
-        "offers": [
-          {
-            "id": "OFFER_ID",
-            "type": "GOLD_LOAN",
-            "accepted": true,
-            "expired": false
-          }
-        ],
-        "fulfillments": [
-          {
-            "id": "FUL_1",
-            "type": "LOAN",
-            "mode": "OFFLINE",
-            "selected_location_id": "L2",
-            "state": {
-              "code": "PROCESSING"
-            },
-            "agent": {
-              "name": "Rohan Kumar",
-              "phone": "+919999999999"
-            }
-          }
-        ]
+  tenant_id: string; // Tenant ID shall be provided by AL
+  application_id: string; // Application ID shall be provided by AL
+  borrower: {
+    id: // AL generated borrower ID *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+    tenant_id: string; // Tenant ID shall be provided by AL
+    application_id: string; // Application ID shall be provided by AL
+    provider_id: // Tenant-provided borrower identifier (unique per borrower, usually per mobile number). *Example:* `cust_9876543210`,
+    profile: {
+      Personal: {
+        panName: // (max 3 words accepted) The borrower’s full name exactly as it appears on their PAN record. *Example:* `Rahul Kumar Sharma`,
+        dob: // this needs to be a valid ISO 8601 date (Example: YYYY-MM-DDThh:mm:ss.000Z — 2026-01-01T11:59:00.018Z (timestamp is optional, a default value of 00:00:00.000 can be used.) *Example:* `1994-08-17T00:00:00.000Z`,
+        gender: // *Example:* `male`, `female` and `transgender`,
+        personalemail: // (should contain at least an "@") *Example:* `rahul.sharma@gmail.com`,
+        pan: // PAN-regex must be followed *Example:* `ABCDE1234F`,
+        contactNumber: // E.164 format accepted (+91 is the only accepted country code. Post that, 10 digits accepted. Final length should be a max of 13 characters. Authenticated number should only be passed.) *Example:* `+919876543210`,
+      },
+      Work: {
+        employmentType: // The borrower’s primary mode of employment or income generation. Used to determine eligibility logic, document requirements, and lender routing (e.g. salaried vs self-employed). *Example:* `salaried`,
+        officialemail: // (should contain at least an "@", should not be a common e-mail like @gmail.com, @hotmail.com, @yahoo.com, etc.). *Example:* `rahul.sharma@acmecorp.in`,
+        income: // (should be a valid positve integer, no commas, ) The borrower’s declared or computed income, expected as a monthly amount. *Example:* `75000`,
+        companyName: // Name of the employer or business entity the borrower is associated with. *Example:* `Acme Technologies Pvt Ltd`,
+        udyamNumber: // Adhere to Udyam Number RegEx. The borrower’s Udyam Registration Number, applicable only for self-employed or MSME borrowers. *Example:* `Udyam-KA-05-0123456`,
+      },
+      Address: {
+        addressL1: // *Example:* `Flat 302, Shanti Apartments`,
+        addressL2: // *Example:* `Near MG Road Metro Station`,
+        city: // *Example:* `Rajkot`,
+        state: // *Example:* `Gujarat`,
+        pincode: // *Example:* `360001`,
+      },
+      goldLoan: {
+        userType: individual,
+        constitution: null,
+        jewelleryWeightGrams: 52,
+        purity: 22K,
+        endUse: medicalTreatmentAndEmergencies,
+        bureauConsent: true,
       }
-    ]
-  }
-}
+    },
+    journeys: [
+      {
+        id: // Internal ID for this journey (one borrower can have multiple). *Example:* `jrn_1b2c3d4e-55aa-4b21-9c11-7dd2e1b8a0ab`,
+        ondc_transaction_id: // Unique ONDC transaction identifier for protocol-level correlation. *Example:* `c0a8012e-7b2f-4f2a-9e31-2f1e0c3a1a22`,
+        created: // When journey was created. *Example:* `2026-01-05T12:45:00Z`,
+        updated: // Last update timestamp for journey state machine. *Example:* `2026-01-05T13:20:12Z`,
+        tenant_id: string; // Tenant ID shall be provided by AL
+        application_id: string; // Application ID shall be provided by AL
+        borrower_id: // Borrower foreign key for this journey. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+        type: `GOLD_LOAN`,
+        status: "LENDER_REDIRECTED",
+        activity_status: "ACTIVE" | "IDLE" | "INACTIVE",
+        decision_status: "APPROVED" | "NOT-APPROVED",
+        lender_mode: "OFFLINE" | "ONLINE",
+        kyc_status: `PENDING` | `SUCCESS` | `FAILURE`,
+        kyc_attempts: 1,
+        emandate_status: `PENDING` | `SUCCESS` | `FAILURE`,
+        emandate_attempts: 0,
+        esign_status: `PENDING` | `SUCCESS` | `FAILURE`,
+        esign_attempts: 0,
+        change_in_offer: true | false,
+        borrower_preferred_amount: // Borrower’s preferred loan amount. *Example:* `200000`,
+        borrower_preferred_tenure: // Borrower’s preferred tenure in months. *Example:* `12`,
+        lender_mode: "ONLINE" | "OFFLINE",
+        lenders: [
+          {
+            id: // *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            created: // Lender record created timestamp. *Example:* `2026-01-05T12:50:10Z`,
+            tenant_id: // Tenant partition key. *Example:* `tnt_2f6c1a9b7d`,
+            application_id: // Application partition key. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            borrower_id: // Borrower FK. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            journey_id: // Journey FK. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            offer_id: // Offer FK. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            ondc_transaction_id: // ONDC correlation ID for lender-level interaction. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            data: // *Example:* `[ { "on_search": { "...": "..." } } ]`,
+            lender_name: // Lender name. *Example:* `Lender XYZ NBFC`,
+            lender_gro_name: // Grievance Redressal Officer name (required). *Example:* `Priya Menon`,
+            lender_gro_email: // GRO email. *Example:* `gro@lenderxyz.com`,
+            lender_gro_contact_number: // GRO contact number. *Example:* `+91-80-40001234`,
+            lender_gro_designation: // GRO designation/title. *Example:* `Grievance Redressal Officer`,
+            lender_gro_address: // GRO address. *Example:* `4th Floor, Business Park, Bengaluru, KA 560001`,
+            lender_customer_support_link: // Support URL. *Example:* `https://lenderxyz.com/support`,
+            lender_customer_support_contact_number: // Support number. *Example:* `1800-123-456`,
+            lender_customer_support_email: // Support email. *Example:* `support@lenderxyz.com`,
+          },
+        ],
+
+        offers: [ // Offer array may be updated with the revised offer amount (borrower preferred).
+          {
+            id: // Internal offer record ID. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            created: // Offer created timestamp. *Example:* `2026-01-05T12:55:00Z`,
+            updated: // Offer updated timestamp. *Example:* `2026-01-05T13:10:30Z`,
+            tenant_id: // Tenant partition key. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            application_id: // Application partition key. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            borrower_id: // Borrower FK. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            journey_id: // Journey FK. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            lender_id: // Lender FK for this offer. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            ondc_transaction_id: // Offer-level ONDC correlation ID. *Example:* `0b2c3d4e-5f60-4a7b-8c9d-001122334455`,
+            accepted: true,
+            expired: false,
+            type: // *Example:* `GOLD_LOAN`,
+            amount_principal: // Principal amount. *Example:* `200000`,
+            amount_total_interest_payable: // Total interest payable over tenure. *Example:* `24000`,
+            amount_net_disbursed_amount: // *Example:* `196500`,
+            offer_term: // *Example:* `12 months`,
+            interest_rate: // *Example:* `12.50`,
+            interest_type: // *Example:* `Fixed` / `reducing`,
+            annual_percentage_rate: // *Example:* `14.75%`,
+            number_of_installments: // *Example:* `12`,
+            cool_off_period: // *Example:* `3 days`,
+            terms_and_conditions_link: // URL to T&C. *Example:* `https://lenderxyz.com/tnc/loan`,
+            key_facts_statement_link: // URL to KFS. *Example:* `https://lenderxyz.com/kfs/loan`,
+            application_fees: // *Example:* `₹0`,
+            foreclosure_fees: // *Example:* `2%`,
+            interest_rate_conversion_charges: // *Example:* `500 INR`,
+            delay_penalty_fees: // *Example:* `5%`,
+            other_penalty_fees: // *Example:* `1%`,
+            processing_fees: // *Example:* `1800`,
+            other_upfront_charges: // *Example:* `100`,
+            insurance_charges: // *Example:* `100`,
+            other_charges: // *Example:* `1000`,
+            ltv_ratio: // *Example:* `75%`,
+            agent: { //Agent information will only be available for accepted loan for offline mode
+              name: //Example: Rajesh Sharma,
+              contact: //Example: +91-99xx99xx99xx
+            },
+          },
+        ],
+      },
+    ],
+  },
+};
 ```
 
-## 7. Disbursed
-```json
-{
-  "tenant_id": "TENANT_ID",
-  "application_id": "APPLICATION_ID",
-  "borrower": {
-    "id": "AL_BORROWER_ID",
-    "provider_id": "BORROWER-123",
-    "journeys": [
-      {
-        "id": "JOURNEY_ID",
-        "type": "GOLD_LOAN",
-        "status": "DISBURSED",
-        "activity_status": "ACTIVE",
-        "decision_status": "APPROVED",
-        "lender_mode": "ONLINE",
-        "kyc_status": "SUCCESS",
-        "kyc_attempts": 1,
-        "emandate_status": "SUCCESS",
-        "emandate_attempts": 1,
-        "esign_status": "SUCCESS",
-        "esign_attempts": 1,
-        "offers": [
-          {
-            "id": "OFFER_ID",
-            "type": "GOLD_LOAN",
-            "accepted": true,
-            "expired": false,
-            "amount_principal": "400000",
-            "number_of_installments": "5",
-            "installments": [
-              {
-                "serial_number": 1,
-                "type": "INSTALLMENT",
-                "amount": "88400",
-                "status": "PAID",
-                "installment_due_date": "2026-03-05T00:00:00Z"
-              },
-              {
-                "serial_number": 2,
-                "type": "INSTALLMENT",
-                "amount": "88400",
-                "status": "NOT-DUE",
-                "installment_due_date": "2026-04-05T00:00:00Z"
-              }
-            ]
-          }
-        ],
-        "fulfillments": [
-          {
-            "id": "FUL_1",
-            "type": "LOAN",
-            "mode": "OFFLINE",
-            "selected_location_id": "L2",
-            "state": {
-              "code": "DISBURSED"
-            },
-            "agent": {
-              "name": "Rohan Kumar",
-              "phone": "+919999999999"
-            }
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
-## 8. Collections Update
+### 8. Collections Update
 Frequent post-disbursal event for installment state updates.
 
 ```json
 {
-  "tenant_id": "TENANT_ID",
-  "application_id": "APPLICATION_ID",
-  "borrower": {
-    "id": "AL_BORROWER_ID",
-    "provider_id": "BORROWER-123",
-    "journeys": [
+  tenant_id: string; // Tenant ID shall be provided by AL
+  application_id: string; // Application ID shall be provided by AL
+  borrower: {
+    id: // AL generated borrower ID *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+    tenant_id: string; // Tenant ID shall be provided by AL
+    application_id: string; // Application ID shall be provided by AL
+    provider_id: // Tenant-provided borrower identifier (unique per borrower, usually per mobile number). *Example:* `cust_9876543210`,
+    profile: {
+      Personal: {
+        panName: // (max 3 words accepted) The borrower’s full name exactly as it appears on their PAN record. *Example:* `Rahul Kumar Sharma`,
+        dob: // this needs to be a valid ISO 8601 date (Example: YYYY-MM-DDThh:mm:ss.000Z — 2026-01-01T11:59:00.018Z (timestamp is optional, a default value of 00:00:00.000 can be used.) *Example:* `1994-08-17T00:00:00.000Z`,
+        gender: // *Example:* `male`, `female` and `transgender`,
+        personalemail: // (should contain at least an "@") *Example:* `rahul.sharma@gmail.com`,
+        pan: // PAN-regex must be followed *Example:* `ABCDE1234F`,
+        contactNumber: // E.164 format accepted (+91 is the only accepted country code. Post that, 10 digits accepted. Final length should be a max of 13 characters. Authenticated number should only be passed.) *Example:* `+919876543210`,
+      },
+      Work: {
+        employmentType: // The borrower’s primary mode of employment or income generation. Used to determine eligibility logic, document requirements, and lender routing (e.g. salaried vs self-employed). *Example:* `salaried`,
+        officialemail: // (should contain at least an "@", should not be a common e-mail like @gmail.com, @hotmail.com, @yahoo.com, etc.). *Example:* `rahul.sharma@acmecorp.in`,
+        income: // (should be a valid positve integer, no commas, ) The borrower’s declared or computed income, expected as a monthly amount. *Example:* `75000`,
+        companyName: // Name of the employer or business entity the borrower is associated with. *Example:* `Acme Technologies Pvt Ltd`,
+        udyamNumber: // Adhere to Udyam Number RegEx. The borrower’s Udyam Registration Number, applicable only for self-employed or MSME borrowers. *Example:* `Udyam-KA-05-0123456`,
+      },
+      Address: {
+        addressL1: // *Example:* `Flat 302, Shanti Apartments`,
+        addressL2: // *Example:* `Near MG Road Metro Station`,
+        city: // *Example:* `Rajkot`,
+        state: // *Example:* `Gujarat`,
+        pincode: // *Example:* `360001`,
+      },
+      goldLoan: {
+        userType: individual,
+        constitution: null,
+        jewelleryWeightGrams: 52,
+        purity: 22K,
+        endUse: medicalTreatmentAndEmergencies,
+        bureauConsent: true,
+      }
+    },
+    journeys: [
       {
-        "id": "JOURNEY_ID",
-        "type": "GOLD_LOAN",
-        "status": "DISBURSED",
-        "activity_status": "ACTIVE",
-        "decision_status": "APPROVED",
-        "offers": [
+        id: // Internal ID for this journey (one borrower can have multiple). *Example:* `jrn_1b2c3d4e-55aa-4b21-9c11-7dd2e1b8a0ab`,
+        ondc_transaction_id: // Unique ONDC transaction identifier for protocol-level correlation. *Example:* `c0a8012e-7b2f-4f2a-9e31-2f1e0c3a1a22`,
+        created: // When journey was created. *Example:* `2026-01-05T12:45:00Z`,
+        updated: // Last update timestamp for journey state machine. *Example:* `2026-01-05T13:20:12Z`,
+        tenant_id: string; // Tenant ID shall be provided by AL
+        application_id: string; // Application ID shall be provided by AL
+        borrower_id: // Borrower foreign key for this journey. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+        type: `GOLD_LOAN`,
+        status: "DISBURSED",
+        activity_status: "ACTIVE" | "IDLE" | "INACTIVE",
+        decision_status: "APPROVED" | "NOT-APPROVED",
+        lender_mode: "OFFLINE" | "ONLINE",
+        kyc_status: `SUCCESS`,
+        kyc_attempts: 1,
+        emandate_status: `SUCCESS`,
+        emandate_attempts: 1,
+        esign_status: `SUCCESS`,
+        esign_attempts: 1,
+        change_in_offer: true | false,
+        borrower_preferred_amount: // Borrower’s preferred loan amount. *Example:* `200000`,
+        borrower_preferred_tenure: // Borrower’s preferred tenure in months. *Example:* `12`,
+        lender_mode: "ONLINE" | "OFFLINE",
+        lenders: [
           {
-            "id": "OFFER_ID",
-            "type": "GOLD_LOAN",
-            "accepted": true,
-            "last_installment_date": "2026-03-05T00:00:00Z",
-            "last_installment_status": "PAID",
-            "installments": [
+            id: // *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            created: // Lender record created timestamp. *Example:* `2026-01-05T12:50:10Z`,
+            tenant_id: // Tenant partition key. *Example:* `tnt_2f6c1a9b7d`,
+            application_id: // Application partition key. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            borrower_id: // Borrower FK. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            journey_id: // Journey FK. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            offer_id: // Offer FK. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            ondc_transaction_id: // ONDC correlation ID for lender-level interaction. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            data: // *Example:* `[ { "on_search": { "...": "..." } } ]`,
+            lender_name: // Lender name. *Example:* `Lender XYZ NBFC`,
+            lender_gro_name: // Grievance Redressal Officer name (required). *Example:* `Priya Menon`,
+            lender_gro_email: // GRO email. *Example:* `gro@lenderxyz.com`,
+            lender_gro_contact_number: // GRO contact number. *Example:* `+91-80-40001234`,
+            lender_gro_designation: // GRO designation/title. *Example:* `Grievance Redressal Officer`,
+            lender_gro_address: // GRO address. *Example:* `4th Floor, Business Park, Bengaluru, KA 560001`,
+            lender_customer_support_link: // Support URL. *Example:* `https://lenderxyz.com/support`,
+            lender_customer_support_contact_number: // Support number. *Example:* `1800-123-456`,
+            lender_customer_support_email: // Support email. *Example:* `support@lenderxyz.com`,
+          },
+        ],
+        offers: [ // Offer array may be updated with the revised offer amount (borrower preferred).
+          {
+            id: // Internal offer record ID. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            created: // Offer created timestamp. *Example:* `2026-01-05T12:55:00Z`,
+            updated: // Offer updated timestamp. *Example:* `2026-01-05T13:10:30Z`,
+            tenant_id: // Tenant partition key. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            application_id: // Application partition key. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            borrower_id: // Borrower FK. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            journey_id: // Journey FK. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            lender_id: // Lender FK for this offer. *Example:* `8D8AC610-566D-4EF0-9C22-186B2A5ED793`,
+            ondc_transaction_id: // Offer-level ONDC correlation ID. *Example:* `0b2c3d4e-5f60-4a7b-8c9d-001122334455`,
+            accepted: true,
+            expired: false,
+            type: // *Example:* `PERSONAL_LOAN`,
+            amount_principal: // Principal amount. *Example:* `200000`,
+            amount_total_interest_payable: // Total interest payable over tenure. *Example:* `24000`,
+            amount_net_disbursed_amount: // *Example:* `196500`,
+            offer_term: // *Example:* `12 months`,
+            interest_rate: // *Example:* `12.50`,
+            interest_type: // *Example:* `Fixed` / `reducing`,
+            annual_percentage_rate: // *Example:* `14.75%`,
+            number_of_installments: // *Example:* `12`,
+            cool_off_period: // *Example:* `3 days`,
+            terms_and_conditions_link: // URL to T&C. *Example:* `https://lenderxyz.com/tnc/loan`,
+            key_facts_statement_link: // URL to KFS. *Example:* `https://lenderxyz.com/kfs/loan`,
+            application_fees: // *Example:* `₹0`,
+            foreclosure_fees: // *Example:* `2%`,
+            interest_rate_conversion_charges: // *Example:* `500 INR`,
+            delay_penalty_fees: // *Example:* `5%`,
+            other_penalty_fees: // *Example:* `1%`,
+            processing_fees: // *Example:* `1800`,
+            other_upfront_charges: // *Example:* `100`,
+            insurance_charges: // *Example:* `100`,
+            other_charges: // *Example:* `1000`,
+            last_installment_date: // *Example:* `2026-02-05T00:00:00Z`,
+            last_installment_status: // *Example:* "PAID" | "OVERDUE",
+            ltv_ratio: //Example: 75%,
+            installments: [
               {
-                "serial_number": 1,
-                "type": "INSTALLMENT",
-                "amount": "88400",
-                "status": "PAID",
-                "installment_due_date": "2026-03-05T00:00:00Z"
+                serial_number: 1 (can be 1 to X, where X = no. of installments),
+                type: `INSTALLMENT`,
+                amount: // *Example:* `18700`,
+                status: // *Example:* "PAID" | "OVERDUE" | "NOT-DUE",
+                installment_due_date: // Installment due date. *Example:* `2026-02-05T00:00:00Z`,
               },
               {
-                "serial_number": 2,
-                "type": "INSTALLMENT",
-                "amount": "88400",
-                "status": "OVERDUE",
-                "installment_due_date": "2026-04-05T00:00:00Z"
-              }
-            ]
-          }
-        ],
-        "fulfillments": [
-          {
-            "id": "FUL_1",
-            "type": "LOAN",
-            "mode": "OFFLINE",
-            "selected_location_id": "L2",
-            "state": {
-              "code": "DISBURSED"
+                serial_number: 2 (can be 1 to X, where X = no. of installments),
+                type: `INSTALLMENT`,
+                amount: // *Example:* `18700`,
+                status: // *Example:* "PAID" | "OVERDUE" | "NOT-DUE",
+                installment_due_date: // Installment due date. *Example:* `2026-02-05T00:00:00Z`,
+              },
+            ],
+            agent: { //Agent information will only be available for accepted loan for offline mode
+              name: //Example: Rajesh Sharma,
+              contact: //Example: +91-99xx99xx99xx
             },
-            "agent": {
-              "name": "Rohan Kumar",
-              "phone": "+919999999999"
-            }
-          }
-        ]
-      }
-    ]
-  }
-}
+          },
+        ],
+      },
+    ],
+  },
+};
 ```
