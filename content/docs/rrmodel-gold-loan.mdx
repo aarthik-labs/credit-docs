@@ -62,7 +62,7 @@ It follows the same integration style as the Personal Loan journey and adds Gold
     "constitution": null,
     "jewelleryWeightGrams": 52,
     "purity": "22K",
-    "endUse": "medicalTreatmentAndEmergencies",
+    "endUse": consumerDurablePurchase | education | travel | health | marriage | familyFunctions | medicalTreatmentAndEmergencies | travelEducationExpenses | businessExpansion | agricultureAndFarmRelatedNeeds | purchaseOfEquipment | other,
     "bureauConsent": true,
   }
 }
@@ -153,13 +153,14 @@ curl --request POST "${PLATFORM_BASE_URL}/api/lab/sessions" \
       "contactNumber": "9876543210",
       "pan": "ABCDE1234F"
     },
-    goldLoan: {
-      userType: individual,
+     goldLoan: {
+      userType: individual | non-individual,
       constitution: null,
       jewelleryWeightGrams: 52,
       purity: 22K,
-      endUse: medicalTreatmentAndEmergencies,
+      endUse: consumerDurablePurchase | education | travel | health | marriage | familyFunctions | medicalTreatmentAndEmergencies | travelEducationExpenses | businessExpansion | agricultureAndFarmRelatedNeeds | purchaseOfEquipment | other,
       bureauConsent: true,
+      aaID: "9876543210@finvu"(optional)
     }
   }'
 ```
@@ -307,7 +308,7 @@ Always validate `event.origin` strictly. Snapshot payloads may contain sensitive
         constitution: null,
         jewelleryWeightGrams: 52,
         purity: 22K,
-        endUse: medicalTreatmentAndEmergencies,
+        endUse: consumerDurablePurchase | education | travel | health | marriage | familyFunctions | medicalTreatmentAndEmergencies | travelEducationExpenses | businessExpansion | agricultureAndFarmRelatedNeeds | purchaseOfEquipment | other,
         bureauConsent: true,
         aaID: 9876543210@finvu,
         requestedAmount: 400000,
@@ -376,7 +377,7 @@ If no offer is received, `offers` will be an empty array and status is `NOT_OFFE
         constitution: null,
         jewelleryWeightGrams: 52,
         purity: 22K,
-        endUse: medicalTreatmentAndEmergencies,
+        endUse: consumerDurablePurchase | education | travel | health | marriage | familyFunctions | medicalTreatmentAndEmergencies | travelEducationExpenses | businessExpansion | agricultureAndFarmRelatedNeeds | purchaseOfEquipment | other,
         bureauConsent: true,
         aaID: 9876543210@finvu,
         requestedAmount: 400000,
@@ -553,7 +554,7 @@ journeys: [
         constitution: null,
         jewelleryWeightGrams: 52,
         purity: 22K,
-        endUse: medicalTreatmentAndEmergencies,
+        endUse: consumerDurablePurchase | education | travel | health | marriage | familyFunctions | medicalTreatmentAndEmergencies | travelEducationExpenses | businessExpansion | agricultureAndFarmRelatedNeeds | purchaseOfEquipment | other,
         bureauConsent: true,
         aaID: 9876543210@finvu,
         requestedAmount: 400000,
@@ -641,8 +642,9 @@ journeys: [
         constitution: null,
         jewelleryWeightGrams: 52,
         purity: 22K,
-        endUse: medicalTreatmentAndEmergencies,
+        endUse: consumerDurablePurchase | education | travel | health | marriage | familyFunctions | medicalTreatmentAndEmergencies | travelEducationExpenses | businessExpansion | agricultureAndFarmRelatedNeeds | purchaseOfEquipment | other,
         bureauConsent: true,
+        aaID: "9876543210@finvu"(optional)
       }
     },
     journeys: [
@@ -789,12 +791,13 @@ journeys: [
         pincode: // *Example:* `360001`,
       },
       goldLoan: {
-        userType: individual,
+        userType: individual | non-individual,
         constitution: null,
         jewelleryWeightGrams: 52,
         purity: 22K,
-        endUse: medicalTreatmentAndEmergencies,
+        endUse: consumerDurablePurchase | education | travel | health | marriage | familyFunctions | medicalTreatmentAndEmergencies | travelEducationExpenses | businessExpansion | agricultureAndFarmRelatedNeeds | purchaseOfEquipment | other,
         bureauConsent: true,
+        aaID: "9876543210@finvu"(optional)
       }
     },
     journeys: [
@@ -917,12 +920,13 @@ journeys: [
         pincode: // *Example:* `360001`,
       },
       goldLoan: {
-        userType: individual,
+        userType: individual | non-individual,
         constitution: null,
         jewelleryWeightGrams: 52,
         purity: 22K,
-        endUse: medicalTreatmentAndEmergencies,
+        endUse: consumerDurablePurchase | education | travel | health | marriage | familyFunctions | medicalTreatmentAndEmergencies | travelEducationExpenses | businessExpansion | agricultureAndFarmRelatedNeeds | purchaseOfEquipment | other,
         bureauConsent: true,
+        aaID: "9876543210@finvu"(optional)
       }
     },
     journeys: [
@@ -1055,12 +1059,13 @@ Frequent post-disbursal event for installment state updates.
         pincode: // *Example:* `360001`,
       },
       goldLoan: {
-        userType: individual,
+        userType: individual | non-individual,
         constitution: null,
         jewelleryWeightGrams: 52,
         purity: 22K,
-        endUse: medicalTreatmentAndEmergencies,
+        endUse: consumerDurablePurchase | education | travel | health | marriage | familyFunctions | medicalTreatmentAndEmergencies | travelEducationExpenses | businessExpansion | agricultureAndFarmRelatedNeeds | purchaseOfEquipment | other,
         bureauConsent: true,
+        aaID: "9876543210@finvu"(optional)
       }
     },
     journeys: [
