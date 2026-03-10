@@ -1,0 +1,171 @@
+---
+title: Backend Integration
+description: Create or resume borrower sessions securely from your server.
+---
+
+Your backend is the only system that should hold the platform API key. It is responsible for creating or resuming borrower sessions, attaching correlation IDs and idempotency keys, and applying any partner-side mapping or policy before the borrower app receives a session token.
+
+## Recommended server responsibilities
+
+- Keep `PLATFORM_API_KEY` server-only.
+- Create or resume borrower sessions through `POST /api/v1/headless/sessions`.
+- Decide whether refresh tokens stay on the server or are issued to a native app with secure storage.
+- Standardize `X-Correlation-ID` and `Idempotency-Key`.
+- Receive and verify webhook events.
+
+## Example server route
+
+Create a server route in your app, for example:
+
+`app/api/credit/session/route.ts`
+
+```ts
+import { NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
+
+type CreateSessionRequest = {
+  borrowerExternalID: string;
+  journeyType?: "PERSONAL_LOAN" | "GOLD_LOAN";
+  profile?: {
+    contactNumber?: string;
+    pan?: string;
+    panName?: string;
+    personalemail?: string;
+  };
+};
+
+type SessionCreateResponse = {
+  requestID: string;
+  correlationID?: string | null;
+  timestamp: string;
+  data: {
+    borrowerID: string;
+    borrowerExternalID: string;
+    sessionToken: string;
+    refreshToken: string;
+    sessionExpiresAt: string;
+    refreshExpiresAt: string;
+    activeJourney: {
+      journeyID: string;
+      status: string;
+      nextAction: string | null;
+    } | null;
+  };
+  error: null;
+};
+
+export async function POST(request: Request) {
+  const payload = (await request.json().catch(() => null)) as
+    | CreateSessionRequest
+    | null;
+
+  const borrowerExternalID = payload?.borrowerExternalID?.trim();
+  if (!borrowerExternalID) {
+    return NextResponse.json(
+      { error: "Missing borrowerExternalID." },
+      { status: 400 },
+    );
+  }
+
+  const platformBaseURL = process.env.PLATFORM_BASE_URL;
+  const platformAPIKey = process.env.PLATFORM_API_KEY;
+
+  if (!platformBaseURL || !platformAPIKey) {
+    return NextResponse.json(
+      { error: "Platform configuration missing." },
+      { status: 500 },
+    );
+  }
+
+  const correlationID = randomUUID();
+  const idempotencyKey = randomUUID();
+
+  const response = await fetch(`${platformBaseURL}/api/v1/headless/sessions`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${platformAPIKey}`,
+      "Content-Type": "application/json",
+      "X-Correlation-ID": correlationID,
+      "Idempotency-Key": idempotencyKey,
+    },
+    body: JSON.stringify({
+      borrowerExternalID,
+      journeyType: payload?.journeyType ?? "PERSONAL_LOAN",
+      ...(payload?.profile ? { profile: payload.profile } : {}),
+    }),
+    cache: "no-store",
+  });
+
+  const platformPayload = (await response.json().catch(() => null)) as
+    | SessionCreateResponse
+    | { error?: unknown }
+    | null;
+
+  if (!response.ok || !platformPayload || !("data" in platformPayload)) {
+    return NextResponse.json(
+      {
+        error: "Platform session bootstrap failed.",
+        details: platformPayload,
+      },
+      { status: response.status || 500 },
+    );
+  }
+
+  return NextResponse.json({
+    borrowerID: platformPayload.data.borrowerID,
+    borrowerExternalID: platformPayload.data.borrowerExternalID,
+    sessionToken: platformPayload.data.sessionToken,
+    refreshToken: platformPayload.data.refreshToken,
+    sessionExpiresAt: platformPayload.data.sessionExpiresAt,
+    refreshExpiresAt: platformPayload.data.refreshExpiresAt,
+    activeJourney: platformPayload.data.activeJourney,
+  });
+}
+```
+
+<Callout type="warning" title="API key handling">
+Never expose `PLATFORM_API_KEY` to the browser. Borrower session tokens and refresh tokens should only be returned to trusted runtime environments.
+</Callout>
+
+## Environment variables
+
+```bash
+PLATFORM_BASE_URL="https://api.credit.aarthiklabs.com"
+PLATFORM_API_KEY="sk_live_xxx"
+```
+
+## cURL example
+
+```bash
+curl --request POST "${PLATFORM_BASE_URL}/api/v1/headless/sessions" \
+  --header "Authorization: Bearer ${PLATFORM_API_KEY}" \
+  --header "Content-Type: application/json" \
+  --header "Idempotency-Key: 2d0e1ad1-1933-4b4e-b97f-76ef8d6b47d9" \
+  --header "X-Correlation-ID: borrower-start-001" \
+  --data-raw '{
+    "borrowerExternalID": "BORROWER-123",
+    "journeyType": "PERSONAL_LOAN",
+    "profile": {
+      "contactNumber": "9876543210",
+      "pan": "ABCDE1234F",
+      "panName": "Rahul Sharma",
+      "personalemail": "rahul@example.com"
+    }
+  }'
+```
+
+## Refresh strategy
+
+You can support refresh in one of two patterns:
+
+- Backend-managed refresh: your server stores the refresh token, rotates it through `POST /api/v1/headless/sessions/refresh`, and returns only a fresh session token to the borrower app.
+- Client-managed refresh: a native app stores the refresh token in secure storage and calls your server or the platform directly, depending on your policy.
+
+For browser-based integrations, backend-managed refresh is recommended.
+
+## Backend checklist
+
+- Use `Idempotency-Key` on every mutating platform call.
+- Persist `borrowerExternalID` as your canonical borrower identity key.
+- Log `requestID`, `correlationID`, and `journeyID` for traceability.
+- Normalize test and live environment separation in your own config.

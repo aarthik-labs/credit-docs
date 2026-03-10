@@ -1,0 +1,131 @@
+---
+title: Client Integration
+description: Orchestrate journeys, offers, steps, and resume flows from your app.
+---
+
+In the API Experience, your app owns the borrower interface. The platform tells you what state the journey is in and what action is required next. Your client should treat returned `status`, `nextAction`, step `actionRequired`, and `resource` objects as the integration contract.
+
+## Minimal runtime sequence
+
+1. Ask your backend to create or resume a borrower session.
+2. Create a journey with `POST /api/v1/headless/journeys` or resume `activeJourney`.
+3. Read and update profile data through `GET` and `PUT /profile`.
+4. Submit profile through `POST /profile/submit`.
+5. Poll `GET /journeys/{journeyID}/state` or wait for webhook-backed backend updates.
+6. Read offers and proceed with the selected offer.
+7. Render step resources from `GET /offers/{offerID}/steps`.
+8. Drive redirect flows such as AA consent, e-mandate, and loan agreement when returned as step resources.
+
+## Example client helpers
+
+```ts
+type Envelope<T> = {
+  requestID: string;
+  correlationID?: string | null;
+  timestamp: string;
+  data: T;
+  error: null;
+};
+
+async function apiFetch<T>(path: string, init: RequestInit = {}) {
+  const response = await fetch(`https://api.credit.aarthiklabs.com${path}`, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${window.sessionToken}`,
+      "Content-Type": "application/json",
+      ...init.headers,
+    },
+  });
+
+  const payload = (await response.json()) as
+    | Envelope<T>
+    | {
+        error: {
+          code: string;
+          message: string;
+        };
+      };
+
+  if (!response.ok) {
+    throw new Error(
+      "error" in payload ? payload.error.message : "Unexpected API failure.",
+    );
+  }
+
+  return (payload as Envelope<T>).data;
+}
+
+export async function createJourney() {
+  return apiFetch<{
+    journeyID: string;
+    status: string;
+    nextAction: string | null;
+  }>("/api/v1/headless/journeys", {
+    method: "POST",
+    headers: {
+      "Idempotency-Key": crypto.randomUUID(),
+      "X-Correlation-ID": crypto.randomUUID(),
+    },
+    body: JSON.stringify({
+      type: "PERSONAL_LOAN",
+      metadata: { source: "web_app" },
+    }),
+  });
+}
+
+export async function getJourneyState(journeyID: string) {
+  return apiFetch<{
+    journeyID: string;
+    status: string;
+    nextAction: string | null;
+    pendingOperations: string[];
+    updatedAt: string;
+  }>(`/api/v1/headless/journeys/${journeyID}/state`);
+}
+```
+
+## Drive your UI from returned actions
+
+### Journey-level actions
+
+- `FILL_PROFILE`: show or resume the profile form.
+- `WAIT_FOR_OFFERS`: move the borrower to an offer-waiting screen and poll state.
+- `VIEW_OFFERS`: fetch and render offer cards.
+- `COMPLETE_AA`: create or resume AA consent flow.
+- `COMPLETE_STEP`: fetch the relevant step endpoint and render the returned resource.
+
+### Step-level actions
+
+- `NONE`: render completed state or continue automatically.
+- `SUBMIT_FORM`: display the returned form fields and submit data to the matching step endpoint.
+- `REDIRECT`: open the returned `redirectURL` in the same app, browser tab, or native webview according to your UX.
+- `WAIT` or `AWAIT_CALLBACK`: show an in-progress screen and poll or wait for backend eventing.
+- `RECONCILE`: call the matching reconcile endpoint after the borrower returns from an external redirect.
+
+## Resume behavior
+
+Use the following APIs to restore the borrower journey cleanly:
+
+- `POST /api/v1/headless/sessions`: returns `activeJourney` when one already exists.
+- `GET /api/v1/headless/journeys`: lists borrower journeys.
+- `GET /api/v1/headless/journeys/{journeyID}`: returns full detail for a selected journey.
+- `PATCH /api/v1/headless/journeys/{journeyID}/resume`: stores UI resume markers such as `lastCompletedStep` and `lastViewedOfferID`.
+
+## Offer selection
+
+When the borrower selects an offer:
+
+1. Read offer detail from `GET /offers/{offerID}`.
+2. Show KFS, pricing, installments, and any AA indicators.
+3. Call `POST /offers/{offerID}/proceed`.
+4. Treat the returned `proceedBoundaryState` as authoritative.
+
+Once an offer is locked, other offers for the same journey may no longer be valid for progression.
+
+## Step rendering guidance
+
+- KYC: fetch `GET /steps/kyc` and render the current step status or the next lender-required action.
+- Bank mandate: fetch `GET /steps/bank-mandate`; if `resource.type=FORM`, render a form and submit through `POST /steps/bank-mandate`.
+- E-mandate: fetch `GET /steps/e-mandate`; follow the redirect resource when present.
+- Loan agreement: fetch `GET /steps/loan-agreement`; open or embed the returned agreement completion URL according to your UX policy.
+- Disbursal: use the aggregate steps response and journey state to know when the lender has moved beyond agreement signing into processing or disbursal.

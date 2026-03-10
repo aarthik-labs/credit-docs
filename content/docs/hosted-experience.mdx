@@ -1,0 +1,31 @@
+---
+title: Hosted Experience
+description: Embed a complete loan journey with a single backend call and an iframe.
+---
+
+<Callout type="info" title="What this is">
+The hosted experience lets you embed a full loan journey inside your app using a secure iframe. Your backend creates a session, your frontend renders the iframe, and the platform handles tokens and refresh internally.
+</Callout>
+
+## Integration at a glance
+
+- Backend (server-only): `POST /api/loan-journeys/session` calls the platform `POST /api/lab/sessions` with `Authorization: Bearer sk_*`, `borrowerProviderID`, and `contactNumber` (`pan` optional), then returns `embedUrl`.
+- Frontend (client): calls your backend and renders `<iframe src={embedUrl}>`.
+
+<Callout type="warning" title="Allowlist required">
+Your embed domain must be allow-listed per application (`embed_domains`), or the iframe will be blocked by CSP `frame-ancestors`.
+</Callout>
+
+## Next steps
+
+<Cards>
+  <Card href="/docs/integration-overview" title="Integration Overview">
+    The end-to-end flow and requirements.
+  </Card>
+  <Card href="/docs/backend-nextjs" title="Backend (Next.js App Router)">
+    A server route that returns the embed URL.
+  </Card>
+  <Card href="/docs/frontend-nextjs" title="Frontend (Next.js Client)">
+    A client component that renders the iframe.
+  </Card>
+</Cards>

@@ -1,15 +1,24 @@
 {
-  "title": "Hosted Experience by Aarthik Labs",
-  "description": "Embed a complete loan journey with a single backend call and an iframe.",
+  "title": "Credit Integrations by Aarthik Labs",
+  "description": "Choose between a hosted borrower journey and a fully headless API integration.",
   "icon": "Building",
   "root": true,
   "pages": [
     "index",
+    "hosted-experience",
     "integration-overview",
     "backend-nextjs",
     "frontend-nextjs",
     "rrmodel",
     "rrmodel-gold-loan",
+    "api-experience",
+    "api-integration-overview",
+    "api-backend-integration",
+    "api-client-integration",
+    "api-request-response-model",
+    "api-webhooks",
+    "api-troubleshooting",
+    "api-faq",
     "troubleshooting",
     "faq"
   ]

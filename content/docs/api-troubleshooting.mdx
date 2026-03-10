@@ -1,0 +1,123 @@
+---
+title: API Troubleshooting
+description: Common headless integration issues and how to fix them.
+---
+
+## `401 AUTH_INVALID_API_KEY` during session bootstrap
+
+**Likely causes:**
+
+- Wrong environment key
+- Revoked or rotated API key
+- Missing `Authorization: Bearer sk_*`
+
+Fix:
+
+- Verify the correct live or test key is configured on the backend.
+- Confirm the request is sent to the matching platform base URL.
+- Rotate keys if compromise is suspected.
+
+## `401 AUTH_INVALID_SESSION` during runtime calls
+
+**Likely causes:**
+
+- Expired borrower session token
+- Refresh token was rotated but the old token is still in use
+- Session token issued for a different environment
+
+Fix:
+
+- Refresh the borrower session and rotate stored credentials.
+- Clear stale client-side session state when a new session is minted.
+- Do not mix live and test tokens.
+
+## `400 VALIDATION_FAILED` for profile payloads
+
+**Likely causes:**
+
+- Missing `profile.contactNumber`
+- Invalid PAN, DOB, or email format
+- Unsupported enum values for `gender` or `employmentType`
+
+Fix:
+
+- Validate inputs before submission.
+- Normalize enums to documented canonical values such as `male`, `female`, `transgender`, `salaried`, and `selfEmployed`.
+
+## `409 OFFER_LOCK_CONFLICT` when proceeding
+
+**Likely cause:**
+
+- Another offer was already proceeded for the same journey.
+
+Fix:
+
+- Treat the first successful proceed call as authoritative.
+- Reload journey and offer detail before attempting another lender action.
+- Do not present stale offers as selectable after a successful proceed.
+
+## Journey stays in `OFFERS_PENDING`
+
+**Likely causes:**
+
+- Lender dispatch is still in flight
+- You are polling too aggressively and reading state before the next update lands
+- AA is required before more offers can progress
+
+Fix:
+
+- Poll `GET /journeys/{journeyID}/state` every 10-20 seconds for passive waiting.
+- Check `pendingOperations`, offer-level `aa` state, and webhook delivery logs.
+
+## Bank mandate step never becomes actionable
+
+**Likely causes:**
+
+- The borrower has not crossed the correct journey state yet
+- Another prerequisite step is still incomplete
+- You are reading a stale offer selection
+
+Fix:
+
+- Reload `GET /offers/{offerID}/steps`.
+- Confirm the same `offerID` was successfully proceeded.
+- Inspect step `diagnostics` and journey `nextAction`.
+
+## AA redirect URL expires
+
+**Likely cause:**
+
+- The borrower opened an old redirect after the consent session timed out.
+
+Fix:
+
+- Create or reconcile the AA session again.
+- Request a fresh redirect URL through `POST /aa/sessions/{aaSessionID}/redirect`.
+
+## Webhook signature verification fails
+
+**Likely causes:**
+
+- Signature is computed on a parsed JSON body instead of raw bytes
+- Wrong webhook secret
+- Timestamp header omitted from the signed payload
+
+Fix:
+
+- Verify against the exact raw request body.
+- Recheck secret rotation and environment separation.
+- Use the documented timestamp-plus-body signing format.
+
+## `429 RATE_LIMITED`
+
+**Likely causes:**
+
+- Missing backoff in polling loops
+- Duplicate retries without idempotency
+- Excessive write operations from the same borrower or application
+
+Fix:
+
+- Exponentially back off on retries.
+- Use `Idempotency-Key` on every write.
+- Prefer webhook-backed state sync for non-interactive flows.

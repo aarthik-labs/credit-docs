@@ -1,0 +1,48 @@
+---
+title: API FAQ
+description: Practical questions for teams integrating the headless API experience.
+---
+
+## Do I need to build borrower UI myself?
+
+Yes. In the API Experience, your app owns the borrower interface. The platform provides session bootstrap, normalized offer data, stage status, and step resources, but your app decides how those are rendered.
+
+## Do I need to understand ONDC payloads or protocol actions?
+
+No. The public API is intentionally business-domain oriented. You work with journeys, offers, steps, AA sessions, and post-disbursal actions rather than ONDC transaction IDs or raw protocol messages.
+
+## What is the difference between Hosted Experience and API Experience?
+
+- Hosted Experience: you render an iframe and the platform owns the borrower journey UI.
+- API Experience: you own the borrower UI and call the platform APIs directly for journey orchestration.
+
+## Does the borrower ever leave my app?
+
+Usually no, but some steps may require a redirect resource, such as AA consent, e-mandate, or loan-agreement completion. Your app is responsible for handling those redirects and resume behavior.
+
+## How do I resume a journey that spans multiple days?
+
+Bootstrap or resume a borrower session, read `activeJourney` if present, and use `GET /journeys` or `GET /journeys/{journeyID}` to restore the latest borrower context. Persisting `borrowerExternalID` consistently is critical.
+
+## Should I use polling or webhooks?
+
+Use both:
+
+- Polling for the actively viewed borrower screen
+- Webhooks for backend synchronization, analytics, and async recovery
+
+## Where should refresh tokens live?
+
+For web apps, keep refresh tokens server-side. For native apps, secure storage can be used if your threat model allows it. In both cases, rotate refresh tokens and do not log them.
+
+## Can I prefill borrower data?
+
+Yes. Session bootstrap and profile upsert both support prefill. Common fields include contact number, PAN, PAN name, DOB, gender, personal email, work profile, address, and banking information.
+
+## How do I know what screen to show next?
+
+Use `nextAction` from the journey and `actionRequired` from the relevant step response. Those fields are the integration contract for orchestration.
+
+## Can I support post-disbursal servicing through the same API surface?
+
+Yes. The headless API includes post-disbursal status refresh and borrower actions such as foreclosure, pre-part payment, and missed EMI payment.

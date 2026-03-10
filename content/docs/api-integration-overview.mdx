@@ -1,0 +1,101 @@
+---
+title: API Integration Overview
+description: Minimal production-grade flow for a fully headless borrower integration.
+---
+
+This is the recommended production integration for teams building a borrower journey entirely in their own app. Your backend keeps the API key, your app holds borrower session context, and your UI renders each stage based on the platform's step resources and journey state.
+
+## What you build
+
+### Partner backend
+
+- Calls `POST /api/v1/headless/sessions` with `Authorization: Bearer sk_*`.
+- Returns borrower session context to the authenticated app.
+- Stores or rotates refresh tokens based on your app security model.
+- Receives and verifies signed webhooks.
+
+### Borrower app
+
+- Calls your backend to start or resume a borrower session.
+- Uses the borrower session token for all `journey`, `profile`, `offer`, `step`, `aa`, and `post-disbursal` APIs.
+- Renders screens based on `status`, `nextAction`, `actionRequired`, `resource`, and `diagnostics`.
+
+### Eventing layer
+
+- Polls `GET /api/v1/headless/journeys/{journeyID}/state` for active sessions when needed.
+- Consumes `journey.snapshot` webhooks for asynchronous state changes.
+
+## End-to-end flow
+
+<Mermaid
+  chart="
+sequenceDiagram
+  participant App as Borrower App
+  participant PartnerBE as Partner Backend
+  participant Platform as Aarthik Labs API
+  participant Webhook as Partner Webhook Receiver
+
+  App->>PartnerBE: Start or resume borrower session
+  PartnerBE->>Platform: POST /api/v1/headless/sessions (Bearer sk_*)
+  Platform-->>PartnerBE: { sessionToken, refreshToken, borrowerID, activeJourney? }
+  PartnerBE-->>App: session context
+
+  App->>Platform: POST /journeys
+  Platform-->>App: { journeyID, status, nextAction }
+  App->>Platform: PUT /journeys/{journeyID}/profile
+  App->>Platform: POST /journeys/{journeyID}/profile/submit
+  Platform-->>App: { operationID, status: ACCEPTED }
+
+  Platform-->>Webhook: journey.snapshot
+  App->>Platform: GET /journeys/{journeyID}/state
+  Platform-->>App: { status, nextAction, pendingOperations }
+
+  App->>Platform: GET /journeys/{journeyID}/offers
+  Platform-->>App: normalized offer cards
+  App->>Platform: POST /offers/{offerID}/proceed
+  Platform-->>App: offer lock + proceed boundary state
+
+  App->>Platform: GET /offers/{offerID}/steps
+  Platform-->>App: step states + resources
+"
+/>
+
+## Runtime rules
+
+- Use API key tokens only from your backend.
+- Use borrower session tokens only for borrower-scoped runtime APIs.
+- Send `Idempotency-Key` on every mutating call.
+- Send `X-Correlation-ID` on every call that participates in a user-visible flow.
+- Treat `nextAction` and step `actionRequired` as the source of truth for what the borrower should see next.
+- Respect offer locking. Once an offer is proceeded, other offers for the same journey may be blocked.
+
+## Polling guidance
+
+- Active step or just-submitted action: poll every 2-5 seconds.
+- Passive waiting states such as offer dispatch: poll every 10-20 seconds.
+- Prefer webhooks for server-side systems, analytics, and non-interactive reconciliation.
+
+## State model
+
+Public journey states are simplified into the following lifecycle:
+
+1. `STARTED`
+2. `PROFILE_REQUIRED`
+3. `PROFILE_SUBMITTED`
+4. `OFFERS_PENDING`
+5. `OFFERS_AVAILABLE`
+6. `OFFER_SELECTED`
+7. `AA_REQUIRED`
+8. `KYC_PENDING`
+9. `BANK_MANDATE_PENDING`
+10. `E_MANDATE_PENDING`
+11. `LOAN_AGREEMENT_PENDING`
+12. `LENDER_PROCESSING`
+13. `DISBURSED`
+14. `REJECTED`, `EXPIRED`, or `CLOSED`
+
+## Also important
+
+- Public payloads do not expose ONDC action names, transaction IDs, or provider-network internals.
+- Redirect-style steps are returned as resources, not as embedded hosted UI.
+- Journey resume is modeled through session bootstrap, `GET /journeys`, `GET /journeys/{journeyID}`, and `PATCH /journeys/{journeyID}/resume`.

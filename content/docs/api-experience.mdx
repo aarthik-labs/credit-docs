@@ -1,0 +1,66 @@
+---
+title: API Experience
+description: Build a fully headless borrower journey using your own UI and Aarthik Labs APIs.
+---
+
+<Callout type="info" title="What this is">
+The API Experience is for teams that want to own the borrower experience end-to-end while using Aarthik Labs for session bootstrap, lender orchestration, offer normalization, verification steps, Account Aggregator flows, and post-disbursal actions.
+</Callout>
+
+<Callout type="warning" title="Managed onboarding model">
+This documentation describes the API Experience contract and integration model for managed customer implementations.
+</Callout>
+
+## Integration at a glance
+
+- Partner backend authenticates with `Authorization: Bearer sk_*` and creates or resumes borrower sessions.
+- Mobile app, web app, or partner middleware uses a borrower session token to create journeys, submit profiling data, read offers, and drive step APIs.
+- Journey progress is available through polling (`GET /api/v1/headless/journeys/{journeyID}/state`) and signed webhook events (`journey.snapshot`).
+- Customer-facing payloads use business-domain resources such as `journeyID`, `offerID`, `status`, `nextAction`, and step resources. ONDC protocol fields are not exposed.
+
+## What you build
+
+### Backend (server-only)
+
+- Mints or resumes borrower sessions through `POST /api/v1/headless/sessions`.
+- Protects the API key and owns idempotency, correlation IDs, webhook verification, and any partner-specific mapping.
+- Optionally persists refresh tokens server-side and provides a secure refresh endpoint to the app.
+
+### App runtime (client)
+
+- Creates journeys, updates profile data, submits profile, polls state, lists offers, proceeds with an offer, and drives step screens.
+- Renders UI based on returned `status`, `nextAction`, `actionRequired`, `resource`, and `diagnostics`.
+- Handles redirect-style steps such as AA consent, e-mandate, and loan-agreement completion.
+
+### Webhook receiver
+
+- Receives signed `journey.snapshot` events.
+- Correlates events using `journeyID`, `borrowerExternalID`, or your own stored mapping.
+- Updates internal state and analytics without relying on client polling alone.
+
+## Product surface
+
+- Sessions: bootstrap borrower runtime access.
+- Journeys: create, list, read, and resume borrower journeys.
+- Profiling: save and submit borrower data.
+- Offers: read normalized lender offers and proceed or reject.
+- Steps: KYC, bank mandate, e-mandate, loan agreement, and disbursal readiness.
+- Account Aggregator: create, redirect, complete, and reconcile AA sessions.
+- Post-disbursal: foreclosure, pre-part payment, missed EMI payment, and status refresh.
+
+## Next steps
+
+<Cards>
+  <Card href="/docs/api-integration-overview" title="Integration Overview">
+    End-to-end headless flow, token model, and polling strategy.
+  </Card>
+  <Card href="/docs/api-backend-integration" title="Backend Integration">
+    Session bootstrap, API key handling, and secure server patterns.
+  </Card>
+  <Card href="/docs/api-client-integration" title="Client Integration">
+    Journey orchestration, next-action handling, and step rendering.
+  </Card>
+  <Card href="/docs/api-request-response-model" title="Request-Response Model">
+    Headers, envelopes, schema rules, and endpoint reference.
+  </Card>
+</Cards>

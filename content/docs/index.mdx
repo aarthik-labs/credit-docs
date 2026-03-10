@@ -1,31 +1,42 @@
 ---
-title: Hosted Experience
-description: Embed a complete loan journey with a single backend call and an iframe.
+title: Credit Integrations
+description: Choose the integration model that fits your product and engineering surface.
 ---
 
-<Callout type="info" title="What this is">
-The hosted experience lets you embed a full loan journey inside your app using a secure iframe. Your backend creates a session, your frontend renders the iframe, and the platform handles tokens and refresh internally.
+<Callout type="info" title="Two integration models">
+Aarthik Labs supports two ways to integrate borrower credit journeys. Choose the hosted experience when you want the fastest production path, or the API experience when you want to own the borrower UI and orchestration end-to-end.
 </Callout>
 
-## Integration at a glance
+## Hosted Experience
 
-- Backend (server-only): `POST /api/loan-journeys/session` calls the platform `POST /api/lab/sessions` with `Authorization: Bearer sk_*`, `borrowerProviderID`, and `contactNumber` (`pan` optional), then returns `embedUrl`.
-- Frontend (client): calls your backend and renders `<iframe src={embedUrl}>`.
+- Backend (server-only): call `POST /api/lab/sessions` with `Authorization: Bearer sk_*`, `borrowerProviderID`, and `contactNumber` (`pan` optional), then return `embedUrl`.
+- Frontend (client): render `<iframe src={embedUrl}>`.
+- Best for teams that want the platform to own the full borrower journey UI.
 
-<Callout type="warning" title="Allowlist required">
-Your embed domain must be allow-listed per application (`embed_domains`), or the iframe will be blocked by CSP `frame-ancestors`.
+## API Experience
+
+- Partner backend: call `POST /api/v1/headless/sessions` with `Authorization: Bearer sk_*` to bootstrap or resume borrower sessions.
+- App runtime: use the borrower session token to create journeys, submit profile data, list offers, proceed with an offer, and drive step APIs.
+- Eventing: consume `journey.snapshot` webhooks or poll `GET /api/v1/headless/journeys/{journeyID}/state`.
+- Best for teams that want full control over native app, web app, or middleware orchestration.
+
+<Callout type="warning" title="API Experience status">
+The API Experience documentation describes the headless integration contract and onboarding model for managed customer implementations.
 </Callout>
 
 ## Next steps
 
 <Cards>
-  <Card href="./docs/integration-overview" title="Integration Overview">
-    The end-to-end flow and requirements.
+  <Card href="/docs/hosted-experience" title="Hosted Experience">
+    Embed the complete borrower journey inside your app with an iframe.
   </Card>
-  <Card href="./docs/backend-nextjs" title="Backend (Next.js App Router)">
-    A server route that returns the embed URL.
+  <Card href="/docs/api-experience" title="API Experience">
+    Build a fully headless borrower experience using platform APIs.
   </Card>
-  <Card href="./docs/frontend-nextjs" title="Frontend (Next.js Client)">
-    A client component that renders the iframe.
+  <Card href="/docs/integration-overview" title="Hosted Integration Overview">
+    The end-to-end hosted flow and requirements.
+  </Card>
+  <Card href="/docs/api-integration-overview" title="API Integration Overview">
+    The end-to-end headless flow, token model, and step orchestration.
   </Card>
 </Cards>

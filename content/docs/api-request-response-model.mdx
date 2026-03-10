@@ -1,0 +1,477 @@
+---
+title: API Request-Response Model
+description: Headers, envelopes, payload rules, and the public headless API contract.
+---
+
+The API Experience uses a consistent request and response contract across all public endpoints. The API base path is:
+
+```text
+/api/v1/headless
+```
+
+## Authentication
+
+- `Authorization: Bearer <token>`
+- Token classes:
+  - API key token (`sk_*`): server-to-server session bootstrap only
+  - session token (`st_*`) and refresh token (`rt_*`): borrower runtime APIs
+
+## Required headers
+
+- `Idempotency-Key`: required on every mutating endpoint (`POST`, `PUT`, `PATCH`)
+- `X-Correlation-ID`: optional but strongly recommended
+- `X-AL-API-Version`: optional contract pin, for example `2026-03-05`
+
+## Standard envelope
+
+Success envelope:
+
+```json
+{
+  "requestID": "req_01JABC123",
+  "correlationID": "trace_abc",
+  "timestamp": "2026-03-05T15:15:00.000Z",
+  "data": {},
+  "error": null
+}
+```
+
+Error envelope:
+
+```json
+{
+  "requestID": "req_01JABC123",
+  "correlationID": "trace_abc",
+  "timestamp": "2026-03-05T15:15:00.000Z",
+  "data": null,
+  "error": {
+    "code": "VALIDATION_FAILED",
+    "message": "profile.contactNumber must be a valid mobile number",
+    "retryable": false,
+    "details": {
+      "field": "profile.contactNumber"
+    }
+  }
+}
+```
+
+## Borrower identity mapping
+
+`borrowerExternalID` is your permanent borrower identity key. It should remain stable across all sessions for the same borrower. Do not rotate it for the same mobile number or customer identity if you want resume, post-disbursal tracking, and webhook correlation to remain intact.
+
+## Shared enums
+
+- `JourneyType`: `PERSONAL_LOAN`, `GOLD_LOAN`
+- `JourneyLifecycleStatus`: `STARTED`, `PROFILE_REQUIRED`, `PROFILE_SUBMITTED`, `OFFERS_PENDING`, `OFFERS_AVAILABLE`, `OFFER_SELECTED`, `AA_REQUIRED`, `KYC_PENDING`, `BANK_MANDATE_PENDING`, `E_MANDATE_PENDING`, `LOAN_AGREEMENT_PENDING`, `LENDER_PROCESSING`, `DISBURSED`, `REJECTED`, `EXPIRED`, `CLOSED`
+- `OfferCardStatus`: `OFFER_RECEIVED`, `OFFER_AWAITED`, `NO_OFFER_AVAILABLE`
+- `StepStatus`: `PENDING`, `READY`, `IN_PROGRESS`, `SUCCESS`, `FAILURE`, `NOT_REQUIRED`
+- `ActionRequired`: `NONE`, `REDIRECT`, `SUBMIT_FORM`, `AWAIT_CALLBACK`, `RECONCILE`, `WAIT`
+- `AASessionState`: `REQUIRED`, `REDIRECT_READY`, `IN_PROGRESS`, `USER_RETURNED`, `APPROVAL_DISPATCHED`, `RECONCILING`, `CONFIRMED`, `NOT_REQUIRED`, `FAILED`, `EXPIRED`
+
+## Sessions
+
+### `POST /api/v1/headless/sessions`
+
+Purpose:
+
+- Create or resume borrower context for a headless integration.
+- Authenticate with API key bearer token.
+
+Request:
+
+```json
+{
+  "borrowerExternalID": "CUST_0012",
+  "journeyType": "PERSONAL_LOAN",
+  "profile": {
+    "contactNumber": "9876543210",
+    "pan": "ABCDE1234F",
+    "panName": "Rahul Sharma",
+    "personalemail": "rahul@example.com"
+  }
+}
+```
+
+Response `data`:
+
+```json
+{
+  "borrowerID": "24fd7603-4c52-4b0c-9bc5-633191bf8257",
+  "borrowerExternalID": "CUST_0012",
+  "sessionToken": "st_live_abc123_def456",
+  "refreshToken": "rt_live_abc123_def456",
+  "sessionExpiresAt": "2026-03-05T16:40:10.000Z",
+  "refreshExpiresAt": "2026-03-12T16:10:10.000Z",
+  "activeJourney": null
+}
+```
+
+### `POST /api/v1/headless/sessions/refresh`
+
+Purpose:
+
+- Rotate session and refresh token pair.
+- Authenticate with session or refresh token.
+
+Response `data`:
+
+```json
+{
+  "sessionToken": "st_live_renewed_abc",
+  "refreshToken": "rt_live_rotated_abc",
+  "sessionExpiresAt": "2026-03-05T17:05:00.000Z",
+  "refreshExpiresAt": "2026-03-12T16:35:00.000Z"
+}
+```
+
+## Journeys
+
+### `GET /api/v1/headless/journeys`
+
+Purpose:
+
+- List borrower journeys.
+- Optionally filter by `type`.
+
+### `POST /api/v1/headless/journeys`
+
+Purpose:
+
+- Start a new borrower journey using the active borrower session.
+
+Request:
+
+```json
+{
+  "type": "PERSONAL_LOAN",
+  "metadata": {
+    "source": "android_app",
+    "campaign": "summer26"
+  }
+}
+```
+
+Response `data`:
+
+```json
+{
+  "journeyID": "b7bb465b-135e-4ffd-9c7f-0d43f7ee43d9",
+  "type": "PERSONAL_LOAN",
+  "status": "STARTED",
+  "updatedAt": "2026-03-05T16:40:00.000Z",
+  "timelineState": "PROFILE_REQUIRED",
+  "nextAction": "FILL_PROFILE",
+  "capabilities": {
+    "aaEnabled": true,
+    "postDisbursalEnabled": false
+  },
+  "resume": {}
+}
+```
+
+### `GET /api/v1/headless/journeys/{journeyID}`
+
+Purpose:
+
+- Read the full journey detail, including high-level status, capabilities, and resume markers.
+
+### `GET /api/v1/headless/journeys/{journeyID}/state`
+
+Purpose:
+
+- Lightweight polling endpoint for active runtime screens.
+
+Response `data`:
+
+```json
+{
+  "journeyID": "b7bb465b-135e-4ffd-9c7f-0d43f7ee43d9",
+  "status": "OFFERS_PENDING",
+  "nextAction": "WAIT_FOR_OFFERS",
+  "pendingOperations": ["PROFILE_SUBMISSION", "SELECT_DISPATCH"],
+  "updatedAt": "2026-03-05T16:41:58.000Z"
+}
+```
+
+### `PATCH /api/v1/headless/journeys/{journeyID}/resume`
+
+Purpose:
+
+- Persist UI resume markers.
+
+Request:
+
+```json
+{
+  "resume": {
+    "lastCompletedStep": "kyc",
+    "lastViewedOfferID": "32188de4-c1ac-4623-a73f-a1f6ad6406a6"
+  }
+}
+```
+
+## Profiling
+
+### `GET /api/v1/headless/journeys/{journeyID}/profile`
+
+Purpose:
+
+- Read profile snapshot and required fields.
+
+### `PUT /api/v1/headless/journeys/{journeyID}/profile`
+
+Purpose:
+
+- Upsert borrower profile, work profile, address, banking information, and journey metadata.
+
+Request:
+
+```json
+{
+  "profile": {
+    "contactNumber": "9876543210",
+    "pan": "ABCDE1234F",
+    "panName": "Rahul Sharma",
+    "dob": "1995-06-20",
+    "gender": "male",
+    "personalemail": "rahul@example.com"
+  },
+  "workProfile": {
+    "employmentType": "salaried",
+    "income": "75000",
+    "companyName": "Acme Pvt Ltd",
+    "officialemail": "rahul@acme.com"
+  },
+  "address": {
+    "addressL1": "Flat 301",
+    "addressL2": "MG Road",
+    "city": "Bengaluru",
+    "state": "Karnataka",
+    "pincode": "560001"
+  }
+}
+```
+
+### `POST /api/v1/headless/journeys/{journeyID}/profile/submit`
+
+Purpose:
+
+- Trigger lender-network submission asynchronously.
+
+Request:
+
+```json
+{
+  "bureauConsent": true
+}
+```
+
+Accepted response `data`:
+
+```json
+{
+  "operationID": "op_profile_submit_01JB2FR2FH",
+  "status": "ACCEPTED",
+  "pollAfterSeconds": 3
+}
+```
+
+## Offers
+
+### `GET /api/v1/headless/journeys/{journeyID}/offers`
+
+Purpose:
+
+- List normalized lender offer cards.
+
+Response `data.items[]` includes:
+
+- `lenderID`
+- `lenderName`
+- `offerID`
+- `status`
+- `amountPrincipal`
+- `interestRate`
+- `offerTerm`
+- `keyFactsStatementLink`
+- `aa.required`
+- `aa.state`
+- `aa.actionRequired`
+- `lenderStateReason`
+
+### `GET /api/v1/headless/journeys/{journeyID}/offers/{offerID}`
+
+Purpose:
+
+- Read full offer detail, including quote breakup, installments, fulfillments, and `proceedBoundaryState`.
+
+### `POST /api/v1/headless/journeys/{journeyID}/offers/{offerID}/proceed`
+
+Purpose:
+
+- Proceed with the selected offer and apply the offer-selection lock.
+
+Success `data`:
+
+```json
+{
+  "journeyID": "b7bb465b-135e-4ffd-9c7f-0d43f7ee43d9",
+  "offerID": "32188de4-c1ac-4623-a73f-a1f6ad6406a6",
+  "status": "PROCEEDED",
+  "proceeded": true,
+  "proceedBoundaryState": "LOCKED",
+  "offerSelectionLock": {
+    "lockedAt": "2026-03-05T16:50:00.000Z",
+    "lockSource": "OFFER_DETAILS_PROCEED"
+  }
+}
+```
+
+Conflict example:
+
+```json
+{
+  "code": "OFFER_LOCK_CONFLICT",
+  "message": "Another offer is already active for this application.",
+  "retryable": false,
+  "details": {
+    "proceedBoundaryState": "LOCKED_TO_DIFFERENT_OFFER"
+  }
+}
+```
+
+### `POST /api/v1/headless/journeys/{journeyID}/offers/{offerID}/reject`
+
+Purpose:
+
+- Reject an offer at a lender stage.
+
+Request:
+
+```json
+{
+  "rejectedStage": "KYC",
+  "rejectionReason": "Borrower chose another lender"
+}
+```
+
+### `POST /api/v1/headless/journeys/{journeyID}/offers/{offerID}/loan-amount`
+
+Purpose:
+
+- Confirm or revise the requested amount for a selected offer.
+
+Request:
+
+```json
+{
+  "amount": "250000"
+}
+```
+
+## Steps
+
+### `GET /api/v1/headless/journeys/{journeyID}/offers/{offerID}/steps`
+
+Purpose:
+
+- Read the aggregate state for `kyc`, `bankMandate`, `eMandate`, `loanAgreement`, and `disbursal`.
+
+Each step has:
+
+```json
+{
+  "status": "READY",
+  "actionRequired": "SUBMIT_FORM",
+  "resource": {
+    "type": "FORM",
+    "redirectURL": null,
+    "form": {}
+  },
+  "diagnostics": null
+}
+```
+
+### Step-specific endpoints
+
+- `GET /steps/kyc`
+- `GET /steps/kyc/status`
+- `GET /steps/bank-mandate`
+- `POST /steps/bank-mandate`
+- `GET /steps/e-mandate`
+- `GET /steps/loan-agreement`
+
+Bank mandate submission request:
+
+```json
+{
+  "accountHolderName": "Rahul Sharma",
+  "accountNumber": "123456789012",
+  "ifsc": "HDFC0000123",
+  "accountType": "saving"
+}
+```
+
+## Account Aggregator
+
+### AA session endpoints
+
+- `GET /api/v1/headless/journeys/{journeyID}/aa/sessions`
+- `POST /api/v1/headless/journeys/{journeyID}/aa/sessions`
+- `GET /api/v1/headless/journeys/{journeyID}/aa/sessions/{aaSessionID}`
+- `POST /api/v1/headless/journeys/{journeyID}/aa/sessions/{aaSessionID}/redirect`
+- `POST /api/v1/headless/journeys/{journeyID}/aa/sessions/{aaSessionID}/complete`
+- `POST /api/v1/headless/journeys/{journeyID}/aa/sessions/{aaSessionID}/reconcile`
+
+Redirect response `data`:
+
+```json
+{
+  "aaSessionID": "8e899a50-2ec8-4285-9291-47d068052f6d",
+  "state": "REDIRECT_READY",
+  "redirectURL": "https://consent.finvu.in/flow/xyz",
+  "reqdate": "20260305170000000",
+  "txnid": "finvu_txn_123",
+  "expiresAt": "2026-03-05T17:15:00.000Z"
+}
+```
+
+## Post-disbursal
+
+### Endpoints
+
+- `POST /api/v1/headless/journeys/{journeyID}/post-disbursal/status`
+- `POST /api/v1/headless/journeys/{journeyID}/post-disbursal/foreclosure`
+- `POST /api/v1/headless/journeys/{journeyID}/post-disbursal/pre-part-payment`
+- `POST /api/v1/headless/journeys/{journeyID}/post-disbursal/missed-emi-payment`
+
+Async status refresh response:
+
+```json
+{
+  "operationID": "op_pd_status_01JB2HNW5D",
+  "status": "ACCEPTED",
+  "pollAfterSeconds": 5
+}
+```
+
+## Validation rules
+
+1. UUID path parameters must be strict UUID format.
+2. `borrowerExternalID` must stay stable for the same borrower.
+3. Amount fields use positive digit strings such as `"250000"`.
+4. `contactNumber` must satisfy backend validation for Indian mobile numbers.
+5. Public responses never expose ONDC protocol fields.
+
+## Error codes
+
+- `AUTH_INVALID_API_KEY`
+- `AUTH_INVALID_SESSION`
+- `ACCESS_SCOPE_MISMATCH`
+- `RESOURCE_NOT_FOUND`
+- `VALIDATION_FAILED`
+- `STATE_PRECONDITION_FAILED`
+- `OFFER_LOCK_CONFLICT`
+- `ASYNC_OPERATION_PENDING`
+- `UPSTREAM_TEMPORARY_FAILURE`
+- `RATE_LIMITED`
