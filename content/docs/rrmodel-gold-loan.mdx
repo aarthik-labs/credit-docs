@@ -246,602 +246,884 @@ Important behavior:
 
 ### Stage-by-stage lifecycle samples
 
-The payload shape stays the same for every lifecycle update. The examples below are **representative stage snapshots** to show how `borrower.journey.status`, `lenders`, `offers`, and `installments` evolve over time for Gold Loan journeys.
+The payload shape stays the same for every lifecycle update. The examples below use the **same complete field set** for every stage so integrators can treat the payload as a stable contract.
 
-<Callout type="info" title="Examples are abbreviated for readability">
-Each sample below keeps the exact top-level contract, but some unchanged borrower profile fields are omitted with comments so the lifecycle differences are easier to see.
+<Callout type="info" title="Consistent contract across all stages">
+Every Gold Loan example below shows the same top-level fields, borrower profile fields, and journey fields. The `gold_loan` block is always present for Gold Loan journeys. Only the values change from stage to stage.
 </Callout>
 
 #### `STARTED`
 
-```js
+```json
 {
-  tenant_id: "TENANT_ID",
-  application_id: "APPLICATION_ID",
-  borrower: {
-    id: "AL_BORROWER_ID",
-    provider_id: "BORROWER-123",
-    profile: {
-      personal: {
-        panName: null,
-        dob: null,
-        gender: null,
-        personalemail: null,
-        contactNumber: "+919876543210",
+  "tenant_id": "TENANT_ID",
+  "application_id": "APPLICATION_ID",
+  "borrower": {
+    "id": "AL_BORROWER_ID",
+    "provider_id": "BORROWER-123",
+    "profile": {
+      "personal": {
+        "panName": null,
+        "dob": null,
+        "gender": null,
+        "personalemail": null,
+        "contactNumber": "+919876543210"
       },
-      work: {
-        employmentType: null,
-        officialemail: null,
-        income: null,
-        companyName: null,
-        udyamNumber: null,
+      "work": {
+        "employmentType": null,
+        "officialemail": null,
+        "income": null,
+        "companyName": null,
+        "udyamNumber": null
       },
-      address: {
-        addressL1: null,
-        addressL2: null,
-        city: null,
-        state: null,
-        pincode: null,
+      "address": {
+        "addressL1": null,
+        "addressL2": null,
+        "city": null,
+        "state": null,
+        "pincode": null
       },
-      gold_loan: {
-        userType: null,
-        constitution: null,
-        jewelleryWeightGrams: null,
-        purity: null,
-      },
+      "gold_loan": {
+        "userType": null,
+        "constitution": null,
+        "jewelleryWeightGrams": null,
+        "purity": null
+      }
     },
-    journey: {
-      id: "jrn_1b2c3d4e-55aa-4b21-9c11-7dd2e1b8a0ab",
-      type: "GOLD_LOAN",
-      status: "STARTED",
-      activity_status: "ACTIVE",
-      decision_status: null,
-      lender_mode: null,
-      lenders: [],
-      offers: [],
-    },
-  },
+    "journey": {
+      "id": "jrn_1b2c3d4e-55aa-4b21-9c11-7dd2e1b8a0ab",
+      "endUse": null,
+      "bureauConsent": false,
+      "ondc_transaction_id": "c0a8012e-7b2f-4f2a-9e31-2f1e0c3a1a22",
+      "created": "2026-01-05T12:45:00Z",
+      "updated": "2026-01-05T12:45:00Z",
+      "type": "GOLD_LOAN",
+      "status": "STARTED",
+      "activity_status": "ACTIVE",
+      "decision_status": null,
+      "lender_mode": null,
+      "kyc_status": null,
+      "kyc_attempts": null,
+      "emandate_status": null,
+      "emandate_attempts": null,
+      "esign_status": null,
+      "esign_attempts": null,
+      "change_in_offer": false,
+      "borrower_preferred_amount": null,
+      "borrower_preferred_tenure": null,
+      "lenders": [],
+      "offers": []
+    }
+  }
 }
 ```
 
 #### `PROFILED`
 
-```js
+```json
 {
-  tenant_id: "TENANT_ID",
-  application_id: "APPLICATION_ID",
-  borrower: {
-    id: "AL_BORROWER_ID",
-    provider_id: "BORROWER-123",
-    profile: {
-      personal: {
-        panName: "Rahul Sharma",
-        dob: "1995-06-20",
-        gender: "male",
-        personalemail: "rahul@example.com",
-        contactNumber: "+919876543210",
+  "tenant_id": "TENANT_ID",
+  "application_id": "APPLICATION_ID",
+  "borrower": {
+    "id": "AL_BORROWER_ID",
+    "provider_id": "BORROWER-123",
+    "profile": {
+      "personal": {
+        "panName": "Rahul Sharma",
+        "dob": "1995-06-20",
+        "gender": "male",
+        "personalemail": "rahul@example.com",
+        "contactNumber": "+919876543210"
       },
-      work: {
-        employmentType: "selfEmployed",
-        officialemail: null,
-        income: 75000,
-        companyName: "Acme Jewels",
-        udyamNumber: null,
+      "work": {
+        "employmentType": "selfEmployed",
+        "officialemail": null,
+        "income": 75000,
+        "companyName": "Acme Jewels",
+        "udyamNumber": null
       },
-      address: {
-        addressL1: "Flat 301, Sunrise Heights",
-        addressL2: "MG Road",
-        city: "Bengaluru",
-        state: "Karnataka",
-        pincode: "560001",
+      "address": {
+        "addressL1": "Flat 301, Sunrise Heights",
+        "addressL2": "MG Road",
+        "city": "Bengaluru",
+        "state": "Karnataka",
+        "pincode": "560001"
       },
-      gold_loan: {
-        userType: "individual",
-        constitution: null,
-        jewelleryWeightGrams: 52,
-        purity: "22K",
-      },
+      "gold_loan": {
+        "userType": "individual",
+        "constitution": null,
+        "jewelleryWeightGrams": 52,
+        "purity": "22K"
+      }
     },
-    journey: {
-      id: "jrn_1b2c3d4e-55aa-4b21-9c11-7dd2e1b8a0ab",
-      endUse: "businessExpansion",
-      bureauConsent: true,
-      ondc_transaction_id: "c0a8012e-7b2f-4f2a-9e31-2f1e0c3a1a22",
-      created: "2026-01-05T12:45:00Z",
-      updated: "2026-01-05T13:20:12Z",
-      type: "GOLD_LOAN",
-      status: "PROFILED",
-      activity_status: "ACTIVE",
-      decision_status: null,
-      lender_mode: null,
-      kyc_status: "PENDING",
-      kyc_attempts: null,
-      emandate_status: "PENDING",
-      emandate_attempts: null,
-      esign_status: "PENDING",
-      esign_attempts: null,
-      change_in_offer: false,
-      borrower_preferred_amount: null,
-      borrower_preferred_tenure: null,
-      lenders: [],
-      offers: [],
-    },
-  },
+    "journey": {
+      "id": "jrn_1b2c3d4e-55aa-4b21-9c11-7dd2e1b8a0ab",
+      "endUse": "businessExpansion",
+      "bureauConsent": true,
+      "ondc_transaction_id": "c0a8012e-7b2f-4f2a-9e31-2f1e0c3a1a22",
+      "created": "2026-01-05T12:45:00Z",
+      "updated": "2026-01-05T13:20:12Z",
+      "type": "GOLD_LOAN",
+      "status": "PROFILED",
+      "activity_status": "ACTIVE",
+      "decision_status": null,
+      "lender_mode": null,
+      "kyc_status": "PENDING",
+      "kyc_attempts": null,
+      "emandate_status": "PENDING",
+      "emandate_attempts": null,
+      "esign_status": "PENDING",
+      "esign_attempts": null,
+      "change_in_offer": false,
+      "borrower_preferred_amount": null,
+      "borrower_preferred_tenure": null,
+      "lenders": [],
+      "offers": []
+    }
+  }
 }
 ```
 
 #### `OFFERED`
 
-```js
+```json
 {
-  tenant_id: "TENANT_ID",
-  application_id: "APPLICATION_ID",
-  borrower: {
-    id: "AL_BORROWER_ID",
-    provider_id: "BORROWER-123",
-    profile: {
-      // same profiled borrower payload as above, including gold_loan
+  "tenant_id": "TENANT_ID",
+  "application_id": "APPLICATION_ID",
+  "borrower": {
+    "id": "AL_BORROWER_ID",
+    "provider_id": "BORROWER-123",
+    "profile": {
+      "personal": {
+        "panName": "Rahul Sharma",
+        "dob": "1995-06-20",
+        "gender": "male",
+        "personalemail": "rahul@example.com",
+        "contactNumber": "+919876543210"
+      },
+      "work": {
+        "employmentType": "selfEmployed",
+        "officialemail": null,
+        "income": 75000,
+        "companyName": "Acme Jewels",
+        "udyamNumber": null
+      },
+      "address": {
+        "addressL1": "Flat 301, Sunrise Heights",
+        "addressL2": "MG Road",
+        "city": "Bengaluru",
+        "state": "Karnataka",
+        "pincode": "560001"
+      },
+      "gold_loan": {
+        "userType": "individual",
+        "constitution": null,
+        "jewelleryWeightGrams": 52,
+        "purity": "22K"
+      }
     },
-    journey: {
-      id: "jrn_1b2c3d4e-55aa-4b21-9c11-7dd2e1b8a0ab",
-      type: "GOLD_LOAN",
-      status: "OFFERED",
-      activity_status: "ACTIVE",
-      decision_status: null,
-      lender_mode: null,
-      lenders: [
+    "journey": {
+      "id": "jrn_1b2c3d4e-55aa-4b21-9c11-7dd2e1b8a0ab",
+      "endUse": "businessExpansion",
+      "bureauConsent": true,
+      "ondc_transaction_id": "c0a8012e-7b2f-4f2a-9e31-2f1e0c3a1a22",
+      "created": "2026-01-05T12:45:00Z",
+      "updated": "2026-01-05T13:27:00Z",
+      "type": "GOLD_LOAN",
+      "status": "OFFERED",
+      "activity_status": "ACTIVE",
+      "decision_status": null,
+      "lender_mode": null,
+      "kyc_status": "PENDING",
+      "kyc_attempts": null,
+      "emandate_status": "PENDING",
+      "emandate_attempts": null,
+      "esign_status": "PENDING",
+      "esign_attempts": null,
+      "change_in_offer": false,
+      "borrower_preferred_amount": null,
+      "borrower_preferred_tenure": null,
+      "lenders": [
         {
-          id: "lndr_muthoot_01",
-          lender_name: "Muthoot Finance",
-          lender_gro_name: "Regional GRO",
-          lender_gro_email: "gro@muthoot.com",
-          lender_gro_contact_number: "+918000000101",
-          lender_gro_designation: "Grievance Officer",
-          lender_gro_address: "Kochi, Kerala",
-          lender_customer_support_link: "https://www.muthootfinance.com/contact-us",
-          lender_customer_support_contact_number: "+918000000102",
-          lender_customer_support_email: "support@muthoot.com",
-        },
+          "id": "lndr_muthoot_01",
+          "lender_name": "Muthoot Finance",
+          "lender_gro_name": "Regional GRO",
+          "lender_gro_email": "gro@muthoot.com",
+          "lender_gro_contact_number": "+918000000101",
+          "lender_gro_designation": "Grievance Officer",
+          "lender_gro_address": "Kochi, Kerala",
+          "lender_customer_support_link": "https://www.muthootfinance.com/contact-us",
+          "lender_customer_support_contact_number": "+918000000102",
+          "lender_customer_support_email": "support@muthoot.com"
+        }
       ],
-      offers: [
+      "offers": [
         {
-          id: "ofr_gold_001",
-          accepted: false,
-          expired: false,
-          amount_principal: "220000",
-          amount_total_interest_payable: "26400",
-          amount_net_disbursed_amount: "218000",
-          offer_term: "12 months",
-          interest_rate: "12.0",
-          interest_type: "Fixed",
-          annual_percentage_rate: "12.8",
-          number_of_installments: 12,
-          cool_off_period: "3 days",
-          terms_and_conditions_link: "https://example.com/tc/ofr_gold_001",
-          key_facts_statement_link: "https://example.com/kfs/ofr_gold_001",
-          application_fees: "0",
-          foreclosure_fees: "1500",
-          interest_rate_conversion_charges: null,
-          delay_penalty_fees: "400",
-          other_penalty_fees: null,
-          processing_fees: "2000",
-          other_upfront_charges: null,
-          insurance_charges: null,
-          other_charges: null,
-          installments: [],
-        },
-      ],
-    },
-  },
+          "id": "ofr_gold_001",
+          "accepted": false,
+          "expired": false,
+          "amount_principal": "220000",
+          "amount_total_interest_payable": "26400",
+          "amount_net_disbursed_amount": "218000",
+          "offer_term": "12 months",
+          "interest_rate": "12.0",
+          "interest_type": "Fixed",
+          "annual_percentage_rate": "12.8",
+          "number_of_installments": 12,
+          "cool_off_period": "3 days",
+          "terms_and_conditions_link": "https://example.com/tc/ofr_gold_001",
+          "key_facts_statement_link": "https://example.com/kfs/ofr_gold_001",
+          "application_fees": "0",
+          "foreclosure_fees": "1500",
+          "interest_rate_conversion_charges": null,
+          "delay_penalty_fees": "400",
+          "other_penalty_fees": null,
+          "processing_fees": "2000",
+          "other_upfront_charges": null,
+          "insurance_charges": null,
+          "other_charges": null,
+          "installments": []
+        }
+      ]
+    }
+  }
 }
 ```
 
 #### `NOT_OFFERED`
 
-```js
+```json
 {
-  tenant_id: "TENANT_ID",
-  application_id: "APPLICATION_ID",
-  borrower: {
-    id: "AL_BORROWER_ID",
-    provider_id: "BORROWER-123",
-    profile: {
-      // same profiled borrower payload as above, including gold_loan
+  "tenant_id": "TENANT_ID",
+  "application_id": "APPLICATION_ID",
+  "borrower": {
+    "id": "AL_BORROWER_ID",
+    "provider_id": "BORROWER-123",
+    "profile": {
+      "personal": {
+        "panName": "Rahul Sharma",
+        "dob": "1995-06-20",
+        "gender": "male",
+        "personalemail": "rahul@example.com",
+        "contactNumber": "+919876543210"
+      },
+      "work": {
+        "employmentType": "selfEmployed",
+        "officialemail": null,
+        "income": 75000,
+        "companyName": "Acme Jewels",
+        "udyamNumber": null
+      },
+      "address": {
+        "addressL1": "Flat 301, Sunrise Heights",
+        "addressL2": "MG Road",
+        "city": "Bengaluru",
+        "state": "Karnataka",
+        "pincode": "560001"
+      },
+      "gold_loan": {
+        "userType": "individual",
+        "constitution": null,
+        "jewelleryWeightGrams": 52,
+        "purity": "22K"
+      }
     },
-    journey: {
-      id: "jrn_1b2c3d4e-55aa-4b21-9c11-7dd2e1b8a0ab",
-      type: "GOLD_LOAN",
-      status: "NOT_OFFERED",
-      activity_status: "INACTIVE",
-      decision_status: "NOT_APPROVED",
-      lender_mode: null,
-      lenders: [
+    "journey": {
+      "id": "jrn_1b2c3d4e-55aa-4b21-9c11-7dd2e1b8a0ab",
+      "endUse": "businessExpansion",
+      "bureauConsent": true,
+      "ondc_transaction_id": "c0a8012e-7b2f-4f2a-9e31-2f1e0c3a1a22",
+      "created": "2026-01-05T12:45:00Z",
+      "updated": "2026-01-05T13:27:00Z",
+      "type": "GOLD_LOAN",
+      "status": "NOT_OFFERED",
+      "activity_status": "INACTIVE",
+      "decision_status": "NOT_APPROVED",
+      "lender_mode": null,
+      "kyc_status": "PENDING",
+      "kyc_attempts": null,
+      "emandate_status": "PENDING",
+      "emandate_attempts": null,
+      "esign_status": "PENDING",
+      "esign_attempts": null,
+      "change_in_offer": false,
+      "borrower_preferred_amount": null,
+      "borrower_preferred_tenure": null,
+      "lenders": [
         {
-          id: "lndr_muthoot_01",
-          lender_name: "Muthoot Finance",
-          lender_gro_name: "Regional GRO",
-          lender_gro_email: "gro@muthoot.com",
-          lender_gro_contact_number: "+918000000101",
-          lender_gro_designation: "Grievance Officer",
-          lender_gro_address: "Kochi, Kerala",
-          lender_customer_support_link: "https://www.muthootfinance.com/contact-us",
-          lender_customer_support_contact_number: "+918000000102",
-          lender_customer_support_email: "support@muthoot.com",
-        },
+          "id": "lndr_muthoot_01",
+          "lender_name": "Muthoot Finance",
+          "lender_gro_name": "Regional GRO",
+          "lender_gro_email": "gro@muthoot.com",
+          "lender_gro_contact_number": "+918000000101",
+          "lender_gro_designation": "Grievance Officer",
+          "lender_gro_address": "Kochi, Kerala",
+          "lender_customer_support_link": "https://www.muthootfinance.com/contact-us",
+          "lender_customer_support_contact_number": "+918000000102",
+          "lender_customer_support_email": "support@muthoot.com"
+        }
       ],
-      offers: [],
-    },
-  },
+      "offers": []
+    }
+  }
 }
 ```
 
 #### `OFFER_SELECTED`
 
-```js
+```json
 {
-  tenant_id: "TENANT_ID",
-  application_id: "APPLICATION_ID",
-  borrower: {
-    id: "AL_BORROWER_ID",
-    provider_id: "BORROWER-123",
-    profile: {
-      // same profiled borrower payload as above, including gold_loan
+  "tenant_id": "TENANT_ID",
+  "application_id": "APPLICATION_ID",
+  "borrower": {
+    "id": "AL_BORROWER_ID",
+    "provider_id": "BORROWER-123",
+    "profile": {
+      "personal": {
+        "panName": "Rahul Sharma",
+        "dob": "1995-06-20",
+        "gender": "male",
+        "personalemail": "rahul@example.com",
+        "contactNumber": "+919876543210"
+      },
+      "work": {
+        "employmentType": "selfEmployed",
+        "officialemail": null,
+        "income": 75000,
+        "companyName": "Acme Jewels",
+        "udyamNumber": null
+      },
+      "address": {
+        "addressL1": "Flat 301, Sunrise Heights",
+        "addressL2": "MG Road",
+        "city": "Bengaluru",
+        "state": "Karnataka",
+        "pincode": "560001"
+      },
+      "gold_loan": {
+        "userType": "individual",
+        "constitution": null,
+        "jewelleryWeightGrams": 52,
+        "purity": "22K"
+      }
     },
-    journey: {
-      id: "jrn_1b2c3d4e-55aa-4b21-9c11-7dd2e1b8a0ab",
-      type: "GOLD_LOAN",
-      status: "OFFER_SELECTED",
-      activity_status: "ACTIVE",
-      decision_status: null,
-      lender_mode: "OFFLINE",
-      borrower_preferred_amount: 220000,
-      borrower_preferred_tenure: 12,
-      lenders: [
+    "journey": {
+      "id": "jrn_1b2c3d4e-55aa-4b21-9c11-7dd2e1b8a0ab",
+      "endUse": "businessExpansion",
+      "bureauConsent": true,
+      "ondc_transaction_id": "c0a8012e-7b2f-4f2a-9e31-2f1e0c3a1a22",
+      "created": "2026-01-05T12:45:00Z",
+      "updated": "2026-01-05T13:30:00Z",
+      "type": "GOLD_LOAN",
+      "status": "OFFER_SELECTED",
+      "activity_status": "ACTIVE",
+      "decision_status": null,
+      "lender_mode": "OFFLINE",
+      "kyc_status": "PENDING",
+      "kyc_attempts": null,
+      "emandate_status": "PENDING",
+      "emandate_attempts": null,
+      "esign_status": "PENDING",
+      "esign_attempts": null,
+      "change_in_offer": false,
+      "borrower_preferred_amount": 220000,
+      "borrower_preferred_tenure": 12,
+      "lenders": [
         {
-          id: "lndr_muthoot_01",
-          lender_name: "Muthoot Finance",
-          lender_gro_name: "Regional GRO",
-          lender_gro_email: "gro@muthoot.com",
-          lender_gro_contact_number: "+918000000101",
-          lender_gro_designation: "Grievance Officer",
-          lender_gro_address: "Kochi, Kerala",
-          lender_customer_support_link: "https://www.muthootfinance.com/contact-us",
-          lender_customer_support_contact_number: "+918000000102",
-          lender_customer_support_email: "support@muthoot.com",
-        },
+          "id": "lndr_muthoot_01",
+          "lender_name": "Muthoot Finance",
+          "lender_gro_name": "Regional GRO",
+          "lender_gro_email": "gro@muthoot.com",
+          "lender_gro_contact_number": "+918000000101",
+          "lender_gro_designation": "Grievance Officer",
+          "lender_gro_address": "Kochi, Kerala",
+          "lender_customer_support_link": "https://www.muthootfinance.com/contact-us",
+          "lender_customer_support_contact_number": "+918000000102",
+          "lender_customer_support_email": "support@muthoot.com"
+        }
       ],
-      offers: [
+      "offers": [
         {
-          id: "ofr_gold_001",
-          accepted: false,
-          expired: false,
-          amount_principal: "220000",
-          amount_total_interest_payable: "26400",
-          amount_net_disbursed_amount: "218000",
-          offer_term: "12 months",
-          interest_rate: "12.0",
-          interest_type: "Fixed",
-          annual_percentage_rate: "12.8",
-          number_of_installments: 12,
-          cool_off_period: "3 days",
-          terms_and_conditions_link: "https://example.com/tc/ofr_gold_001",
-          key_facts_statement_link: "https://example.com/kfs/ofr_gold_001",
-          application_fees: "0",
-          foreclosure_fees: "1500",
-          interest_rate_conversion_charges: null,
-          delay_penalty_fees: "400",
-          other_penalty_fees: null,
-          processing_fees: "2000",
-          other_upfront_charges: null,
-          insurance_charges: null,
-          other_charges: null,
-          installments: [],
-        },
-      ],
-    },
-  },
+          "id": "ofr_gold_001",
+          "accepted": false,
+          "expired": false,
+          "amount_principal": "220000",
+          "amount_total_interest_payable": "26400",
+          "amount_net_disbursed_amount": "218000",
+          "offer_term": "12 months",
+          "interest_rate": "12.0",
+          "interest_type": "Fixed",
+          "annual_percentage_rate": "12.8",
+          "number_of_installments": 12,
+          "cool_off_period": "3 days",
+          "terms_and_conditions_link": "https://example.com/tc/ofr_gold_001",
+          "key_facts_statement_link": "https://example.com/kfs/ofr_gold_001",
+          "application_fees": "0",
+          "foreclosure_fees": "1500",
+          "interest_rate_conversion_charges": null,
+          "delay_penalty_fees": "400",
+          "other_penalty_fees": null,
+          "processing_fees": "2000",
+          "other_upfront_charges": null,
+          "insurance_charges": null,
+          "other_charges": null,
+          "installments": []
+        }
+      ]
+    }
+  }
 }
 ```
 
 #### `OFFER_ACCEPTED`
 
-```js
+```json
 {
-  tenant_id: "TENANT_ID",
-  application_id: "APPLICATION_ID",
-  borrower: {
-    id: "AL_BORROWER_ID",
-    provider_id: "BORROWER-123",
-    profile: {
-      // same profiled borrower payload as above, including gold_loan
+  "tenant_id": "TENANT_ID",
+  "application_id": "APPLICATION_ID",
+  "borrower": {
+    "id": "AL_BORROWER_ID",
+    "provider_id": "BORROWER-123",
+    "profile": {
+      "personal": {
+        "panName": "Rahul Sharma",
+        "dob": "1995-06-20",
+        "gender": "male",
+        "personalemail": "rahul@example.com",
+        "contactNumber": "+919876543210"
+      },
+      "work": {
+        "employmentType": "selfEmployed",
+        "officialemail": null,
+        "income": 75000,
+        "companyName": "Acme Jewels",
+        "udyamNumber": null
+      },
+      "address": {
+        "addressL1": "Flat 301, Sunrise Heights",
+        "addressL2": "MG Road",
+        "city": "Bengaluru",
+        "state": "Karnataka",
+        "pincode": "560001"
+      },
+      "gold_loan": {
+        "userType": "individual",
+        "constitution": null,
+        "jewelleryWeightGrams": 52,
+        "purity": "22K"
+      }
     },
-    journey: {
-      id: "jrn_1b2c3d4e-55aa-4b21-9c11-7dd2e1b8a0ab",
-      type: "GOLD_LOAN",
-      status: "OFFER_ACCEPTED",
-      activity_status: "ACTIVE",
-      decision_status: null,
-      lender_mode: "OFFLINE",
-      borrower_preferred_amount: 220000,
-      borrower_preferred_tenure: 12,
-      lenders: [
+    "journey": {
+      "id": "jrn_1b2c3d4e-55aa-4b21-9c11-7dd2e1b8a0ab",
+      "endUse": "businessExpansion",
+      "bureauConsent": true,
+      "ondc_transaction_id": "c0a8012e-7b2f-4f2a-9e31-2f1e0c3a1a22",
+      "created": "2026-01-05T12:45:00Z",
+      "updated": "2026-01-05T13:31:00Z",
+      "type": "GOLD_LOAN",
+      "status": "OFFER_ACCEPTED",
+      "activity_status": "ACTIVE",
+      "decision_status": null,
+      "lender_mode": "OFFLINE",
+      "kyc_status": "PENDING",
+      "kyc_attempts": null,
+      "emandate_status": "PENDING",
+      "emandate_attempts": null,
+      "esign_status": "PENDING",
+      "esign_attempts": null,
+      "change_in_offer": false,
+      "borrower_preferred_amount": 220000,
+      "borrower_preferred_tenure": 12,
+      "lenders": [
         {
-          id: "lndr_muthoot_01",
-          lender_name: "Muthoot Finance",
-          lender_gro_name: "Regional GRO",
-          lender_gro_email: "gro@muthoot.com",
-          lender_gro_contact_number: "+918000000101",
-          lender_gro_designation: "Grievance Officer",
-          lender_gro_address: "Kochi, Kerala",
-          lender_customer_support_link: "https://www.muthootfinance.com/contact-us",
-          lender_customer_support_contact_number: "+918000000102",
-          lender_customer_support_email: "support@muthoot.com",
-        },
+          "id": "lndr_muthoot_01",
+          "lender_name": "Muthoot Finance",
+          "lender_gro_name": "Regional GRO",
+          "lender_gro_email": "gro@muthoot.com",
+          "lender_gro_contact_number": "+918000000101",
+          "lender_gro_designation": "Grievance Officer",
+          "lender_gro_address": "Kochi, Kerala",
+          "lender_customer_support_link": "https://www.muthootfinance.com/contact-us",
+          "lender_customer_support_contact_number": "+918000000102",
+          "lender_customer_support_email": "support@muthoot.com"
+        }
       ],
-      offers: [
+      "offers": [
         {
-          id: "ofr_gold_001",
-          accepted: true,
-          expired: false,
-          amount_principal: "220000",
-          amount_total_interest_payable: "26400",
-          amount_net_disbursed_amount: "218000",
-          offer_term: "12 months",
-          interest_rate: "12.0",
-          interest_type: "Fixed",
-          annual_percentage_rate: "12.8",
-          number_of_installments: 12,
-          cool_off_period: "3 days",
-          terms_and_conditions_link: "https://example.com/tc/ofr_gold_001",
-          key_facts_statement_link: "https://example.com/kfs/ofr_gold_001",
-          application_fees: "0",
-          foreclosure_fees: "1500",
-          interest_rate_conversion_charges: null,
-          delay_penalty_fees: "400",
-          other_penalty_fees: null,
-          processing_fees: "2000",
-          other_upfront_charges: null,
-          insurance_charges: null,
-          other_charges: null,
-          installments: [],
-        },
-      ],
-    },
-  },
+          "id": "ofr_gold_001",
+          "accepted": true,
+          "expired": false,
+          "amount_principal": "220000",
+          "amount_total_interest_payable": "26400",
+          "amount_net_disbursed_amount": "218000",
+          "offer_term": "12 months",
+          "interest_rate": "12.0",
+          "interest_type": "Fixed",
+          "annual_percentage_rate": "12.8",
+          "number_of_installments": 12,
+          "cool_off_period": "3 days",
+          "terms_and_conditions_link": "https://example.com/tc/ofr_gold_001",
+          "key_facts_statement_link": "https://example.com/kfs/ofr_gold_001",
+          "application_fees": "0",
+          "foreclosure_fees": "1500",
+          "interest_rate_conversion_charges": null,
+          "delay_penalty_fees": "400",
+          "other_penalty_fees": null,
+          "processing_fees": "2000",
+          "other_upfront_charges": null,
+          "insurance_charges": null,
+          "other_charges": null,
+          "installments": []
+        }
+      ]
+    }
+  }
 }
 ```
 
 #### `LENDER_REDIRECTED`
 
-```js
+```json
 {
-  tenant_id: "TENANT_ID",
-  application_id: "APPLICATION_ID",
-  borrower: {
-    id: "AL_BORROWER_ID",
-    provider_id: "BORROWER-123",
-    profile: {
-      // same profiled borrower payload as above, including gold_loan
+  "tenant_id": "TENANT_ID",
+  "application_id": "APPLICATION_ID",
+  "borrower": {
+    "id": "AL_BORROWER_ID",
+    "provider_id": "BORROWER-123",
+    "profile": {
+      "personal": {
+        "panName": "Rahul Sharma",
+        "dob": "1995-06-20",
+        "gender": "male",
+        "personalemail": "rahul@example.com",
+        "contactNumber": "+919876543210"
+      },
+      "work": {
+        "employmentType": "selfEmployed",
+        "officialemail": null,
+        "income": 75000,
+        "companyName": "Acme Jewels",
+        "udyamNumber": null
+      },
+      "address": {
+        "addressL1": "Flat 301, Sunrise Heights",
+        "addressL2": "MG Road",
+        "city": "Bengaluru",
+        "state": "Karnataka",
+        "pincode": "560001"
+      },
+      "gold_loan": {
+        "userType": "individual",
+        "constitution": null,
+        "jewelleryWeightGrams": 52,
+        "purity": "22K"
+      }
     },
-    journey: {
-      id: "jrn_1b2c3d4e-55aa-4b21-9c11-7dd2e1b8a0ab",
-      type: "GOLD_LOAN",
-      status: "LENDER_REDIRECTED",
-      activity_status: "ACTIVE",
-      decision_status: null,
-      lender_mode: "OFFLINE",
-      kyc_status: "PENDING",
-      kyc_attempts: 1,
-      emandate_status: "PENDING",
-      emandate_attempts: null,
-      esign_status: "PENDING",
-      esign_attempts: null,
-      lenders: [
+    "journey": {
+      "id": "jrn_1b2c3d4e-55aa-4b21-9c11-7dd2e1b8a0ab",
+      "endUse": "businessExpansion",
+      "bureauConsent": true,
+      "ondc_transaction_id": "c0a8012e-7b2f-4f2a-9e31-2f1e0c3a1a22",
+      "created": "2026-01-05T12:45:00Z",
+      "updated": "2026-01-05T13:40:00Z",
+      "type": "GOLD_LOAN",
+      "status": "LENDER_REDIRECTED",
+      "activity_status": "ACTIVE",
+      "decision_status": null,
+      "lender_mode": "OFFLINE",
+      "kyc_status": "PENDING",
+      "kyc_attempts": 1,
+      "emandate_status": "PENDING",
+      "emandate_attempts": null,
+      "esign_status": "PENDING",
+      "esign_attempts": null,
+      "change_in_offer": false,
+      "borrower_preferred_amount": 220000,
+      "borrower_preferred_tenure": 12,
+      "lenders": [
         {
-          id: "lndr_muthoot_01",
-          lender_name: "Muthoot Finance",
-          lender_gro_name: "Regional GRO",
-          lender_gro_email: "gro@muthoot.com",
-          lender_gro_contact_number: "+918000000101",
-          lender_gro_designation: "Grievance Officer",
-          lender_gro_address: "Kochi, Kerala",
-          lender_customer_support_link: "https://www.muthootfinance.com/contact-us",
-          lender_customer_support_contact_number: "+918000000102",
-          lender_customer_support_email: "support@muthoot.com",
-        },
+          "id": "lndr_muthoot_01",
+          "lender_name": "Muthoot Finance",
+          "lender_gro_name": "Regional GRO",
+          "lender_gro_email": "gro@muthoot.com",
+          "lender_gro_contact_number": "+918000000101",
+          "lender_gro_designation": "Grievance Officer",
+          "lender_gro_address": "Kochi, Kerala",
+          "lender_customer_support_link": "https://www.muthootfinance.com/contact-us",
+          "lender_customer_support_contact_number": "+918000000102",
+          "lender_customer_support_email": "support@muthoot.com"
+        }
       ],
-      offers: [
+      "offers": [
         {
-          id: "ofr_gold_001",
-          accepted: true,
-          expired: false,
-          amount_principal: "220000",
-          amount_total_interest_payable: "26400",
-          amount_net_disbursed_amount: "218000",
-          offer_term: "12 months",
-          interest_rate: "12.0",
-          interest_type: "Fixed",
-          annual_percentage_rate: "12.8",
-          number_of_installments: 12,
-          cool_off_period: "3 days",
-          terms_and_conditions_link: "https://example.com/tc/ofr_gold_001",
-          key_facts_statement_link: "https://example.com/kfs/ofr_gold_001",
-          application_fees: "0",
-          foreclosure_fees: "1500",
-          interest_rate_conversion_charges: null,
-          delay_penalty_fees: "400",
-          other_penalty_fees: null,
-          processing_fees: "2000",
-          other_upfront_charges: null,
-          insurance_charges: null,
-          other_charges: null,
-          installments: [],
-        },
-      ],
-    },
-  },
+          "id": "ofr_gold_001",
+          "accepted": true,
+          "expired": false,
+          "amount_principal": "220000",
+          "amount_total_interest_payable": "26400",
+          "amount_net_disbursed_amount": "218000",
+          "offer_term": "12 months",
+          "interest_rate": "12.0",
+          "interest_type": "Fixed",
+          "annual_percentage_rate": "12.8",
+          "number_of_installments": 12,
+          "cool_off_period": "3 days",
+          "terms_and_conditions_link": "https://example.com/tc/ofr_gold_001",
+          "key_facts_statement_link": "https://example.com/kfs/ofr_gold_001",
+          "application_fees": "0",
+          "foreclosure_fees": "1500",
+          "interest_rate_conversion_charges": null,
+          "delay_penalty_fees": "400",
+          "other_penalty_fees": null,
+          "processing_fees": "2000",
+          "other_upfront_charges": null,
+          "insurance_charges": null,
+          "other_charges": null,
+          "installments": []
+        }
+      ]
+    }
+  }
 }
 ```
 
 #### `REJECTED`
 
-```js
+```json
 {
-  tenant_id: "TENANT_ID",
-  application_id: "APPLICATION_ID",
-  borrower: {
-    id: "AL_BORROWER_ID",
-    provider_id: "BORROWER-123",
-    profile: {
-      // same profiled borrower payload as above, including gold_loan
+  "tenant_id": "TENANT_ID",
+  "application_id": "APPLICATION_ID",
+  "borrower": {
+    "id": "AL_BORROWER_ID",
+    "provider_id": "BORROWER-123",
+    "profile": {
+      "personal": {
+        "panName": "Rahul Sharma",
+        "dob": "1995-06-20",
+        "gender": "male",
+        "personalemail": "rahul@example.com",
+        "contactNumber": "+919876543210"
+      },
+      "work": {
+        "employmentType": "selfEmployed",
+        "officialemail": null,
+        "income": 75000,
+        "companyName": "Acme Jewels",
+        "udyamNumber": null
+      },
+      "address": {
+        "addressL1": "Flat 301, Sunrise Heights",
+        "addressL2": "MG Road",
+        "city": "Bengaluru",
+        "state": "Karnataka",
+        "pincode": "560001"
+      },
+      "gold_loan": {
+        "userType": "individual",
+        "constitution": null,
+        "jewelleryWeightGrams": 52,
+        "purity": "22K"
+      }
     },
-    journey: {
-      id: "jrn_1b2c3d4e-55aa-4b21-9c11-7dd2e1b8a0ab",
-      type: "GOLD_LOAN",
-      status: "REJECTED",
-      activity_status: "INACTIVE",
-      decision_status: "NOT_APPROVED",
-      lender_mode: "OFFLINE",
-      kyc_status: "FAILURE",
-      kyc_attempts: 1,
-      emandate_status: "PENDING",
-      emandate_attempts: null,
-      esign_status: "PENDING",
-      esign_attempts: null,
-      lenders: [
+    "journey": {
+      "id": "jrn_1b2c3d4e-55aa-4b21-9c11-7dd2e1b8a0ab",
+      "endUse": "businessExpansion",
+      "bureauConsent": true,
+      "ondc_transaction_id": "c0a8012e-7b2f-4f2a-9e31-2f1e0c3a1a22",
+      "created": "2026-01-05T12:45:00Z",
+      "updated": "2026-01-05T13:44:00Z",
+      "type": "GOLD_LOAN",
+      "status": "REJECTED",
+      "activity_status": "INACTIVE",
+      "decision_status": "NOT_APPROVED",
+      "lender_mode": "OFFLINE",
+      "kyc_status": "FAILURE",
+      "kyc_attempts": 1,
+      "emandate_status": "PENDING",
+      "emandate_attempts": null,
+      "esign_status": "PENDING",
+      "esign_attempts": null,
+      "change_in_offer": false,
+      "borrower_preferred_amount": 220000,
+      "borrower_preferred_tenure": 12,
+      "lenders": [
         {
-          id: "lndr_muthoot_01",
-          lender_name: "Muthoot Finance",
-          lender_gro_name: "Regional GRO",
-          lender_gro_email: "gro@muthoot.com",
-          lender_gro_contact_number: "+918000000101",
-          lender_gro_designation: "Grievance Officer",
-          lender_gro_address: "Kochi, Kerala",
-          lender_customer_support_link: "https://www.muthootfinance.com/contact-us",
-          lender_customer_support_contact_number: "+918000000102",
-          lender_customer_support_email: "support@muthoot.com",
-        },
+          "id": "lndr_muthoot_01",
+          "lender_name": "Muthoot Finance",
+          "lender_gro_name": "Regional GRO",
+          "lender_gro_email": "gro@muthoot.com",
+          "lender_gro_contact_number": "+918000000101",
+          "lender_gro_designation": "Grievance Officer",
+          "lender_gro_address": "Kochi, Kerala",
+          "lender_customer_support_link": "https://www.muthootfinance.com/contact-us",
+          "lender_customer_support_contact_number": "+918000000102",
+          "lender_customer_support_email": "support@muthoot.com"
+        }
       ],
-      offers: [
+      "offers": [
         {
-          id: "ofr_gold_001",
-          accepted: true,
-          expired: false,
-          amount_principal: "220000",
-          amount_total_interest_payable: "26400",
-          amount_net_disbursed_amount: "218000",
-          offer_term: "12 months",
-          interest_rate: "12.0",
-          interest_type: "Fixed",
-          annual_percentage_rate: "12.8",
-          number_of_installments: 12,
-          cool_off_period: "3 days",
-          terms_and_conditions_link: "https://example.com/tc/ofr_gold_001",
-          key_facts_statement_link: "https://example.com/kfs/ofr_gold_001",
-          application_fees: "0",
-          foreclosure_fees: "1500",
-          interest_rate_conversion_charges: null,
-          delay_penalty_fees: "400",
-          other_penalty_fees: null,
-          processing_fees: "2000",
-          other_upfront_charges: null,
-          insurance_charges: null,
-          other_charges: null,
-          installments: [],
-        },
-      ],
-    },
-  },
+          "id": "ofr_gold_001",
+          "accepted": true,
+          "expired": false,
+          "amount_principal": "220000",
+          "amount_total_interest_payable": "26400",
+          "amount_net_disbursed_amount": "218000",
+          "offer_term": "12 months",
+          "interest_rate": "12.0",
+          "interest_type": "Fixed",
+          "annual_percentage_rate": "12.8",
+          "number_of_installments": 12,
+          "cool_off_period": "3 days",
+          "terms_and_conditions_link": "https://example.com/tc/ofr_gold_001",
+          "key_facts_statement_link": "https://example.com/kfs/ofr_gold_001",
+          "application_fees": "0",
+          "foreclosure_fees": "1500",
+          "interest_rate_conversion_charges": null,
+          "delay_penalty_fees": "400",
+          "other_penalty_fees": null,
+          "processing_fees": "2000",
+          "other_upfront_charges": null,
+          "insurance_charges": null,
+          "other_charges": null,
+          "installments": []
+        }
+      ]
+    }
+  }
 }
 ```
 
 #### `DISBURSED`
 
-```js
+```json
 {
-  tenant_id: "TENANT_ID",
-  application_id: "APPLICATION_ID",
-  borrower: {
-    id: "AL_BORROWER_ID",
-    provider_id: "BORROWER-123",
-    profile: {
-      // same profiled borrower payload as above, including gold_loan
+  "tenant_id": "TENANT_ID",
+  "application_id": "APPLICATION_ID",
+  "borrower": {
+    "id": "AL_BORROWER_ID",
+    "provider_id": "BORROWER-123",
+    "profile": {
+      "personal": {
+        "panName": "Rahul Sharma",
+        "dob": "1995-06-20",
+        "gender": "male",
+        "personalemail": "rahul@example.com",
+        "contactNumber": "+919876543210"
+      },
+      "work": {
+        "employmentType": "selfEmployed",
+        "officialemail": null,
+        "income": 75000,
+        "companyName": "Acme Jewels",
+        "udyamNumber": null
+      },
+      "address": {
+        "addressL1": "Flat 301, Sunrise Heights",
+        "addressL2": "MG Road",
+        "city": "Bengaluru",
+        "state": "Karnataka",
+        "pincode": "560001"
+      },
+      "gold_loan": {
+        "userType": "individual",
+        "constitution": null,
+        "jewelleryWeightGrams": 52,
+        "purity": "22K"
+      }
     },
-    journey: {
-      id: "jrn_1b2c3d4e-55aa-4b21-9c11-7dd2e1b8a0ab",
-      type: "GOLD_LOAN",
-      status: "DISBURSED",
-      activity_status: "ACTIVE",
-      decision_status: "APPROVED",
-      lender_mode: "OFFLINE",
-      kyc_status: "SUCCESS",
-      kyc_attempts: 1,
-      emandate_status: "SUCCESS",
-      emandate_attempts: 1,
-      esign_status: "SUCCESS",
-      esign_attempts: 1,
-      lenders: [
+    "journey": {
+      "id": "jrn_1b2c3d4e-55aa-4b21-9c11-7dd2e1b8a0ab",
+      "endUse": "businessExpansion",
+      "bureauConsent": true,
+      "ondc_transaction_id": "c0a8012e-7b2f-4f2a-9e31-2f1e0c3a1a22",
+      "created": "2026-01-05T12:45:00Z",
+      "updated": "2026-01-05T14:05:00Z",
+      "type": "GOLD_LOAN",
+      "status": "DISBURSED",
+      "activity_status": "ACTIVE",
+      "decision_status": "APPROVED",
+      "lender_mode": "OFFLINE",
+      "kyc_status": "SUCCESS",
+      "kyc_attempts": 1,
+      "emandate_status": "SUCCESS",
+      "emandate_attempts": 1,
+      "esign_status": "SUCCESS",
+      "esign_attempts": 1,
+      "change_in_offer": false,
+      "borrower_preferred_amount": 220000,
+      "borrower_preferred_tenure": 12,
+      "lenders": [
         {
-          id: "lndr_muthoot_01",
-          lender_name: "Muthoot Finance",
-          lender_gro_name: "Regional GRO",
-          lender_gro_email: "gro@muthoot.com",
-          lender_gro_contact_number: "+918000000101",
-          lender_gro_designation: "Grievance Officer",
-          lender_gro_address: "Kochi, Kerala",
-          lender_customer_support_link: "https://www.muthootfinance.com/contact-us",
-          lender_customer_support_contact_number: "+918000000102",
-          lender_customer_support_email: "support@muthoot.com",
-        },
+          "id": "lndr_muthoot_01",
+          "lender_name": "Muthoot Finance",
+          "lender_gro_name": "Regional GRO",
+          "lender_gro_email": "gro@muthoot.com",
+          "lender_gro_contact_number": "+918000000101",
+          "lender_gro_designation": "Grievance Officer",
+          "lender_gro_address": "Kochi, Kerala",
+          "lender_customer_support_link": "https://www.muthootfinance.com/contact-us",
+          "lender_customer_support_contact_number": "+918000000102",
+          "lender_customer_support_email": "support@muthoot.com"
+        }
       ],
-      offers: [
+      "offers": [
         {
-          id: "ofr_gold_001",
-          accepted: true,
-          expired: false,
-          amount_principal: "220000",
-          amount_total_interest_payable: "26400",
-          amount_net_disbursed_amount: "218000",
-          offer_term: "12 months",
-          interest_rate: "12.0",
-          interest_type: "Fixed",
-          annual_percentage_rate: "12.8",
-          number_of_installments: 12,
-          cool_off_period: "3 days",
-          terms_and_conditions_link: "https://example.com/tc/ofr_gold_001",
-          key_facts_statement_link: "https://example.com/kfs/ofr_gold_001",
-          application_fees: "0",
-          foreclosure_fees: "1500",
-          interest_rate_conversion_charges: null,
-          delay_penalty_fees: "400",
-          other_penalty_fees: null,
-          processing_fees: "2000",
-          other_upfront_charges: null,
-          insurance_charges: null,
-          other_charges: null,
-          installments: [
+          "id": "ofr_gold_001",
+          "accepted": true,
+          "expired": false,
+          "amount_principal": "220000",
+          "amount_total_interest_payable": "26400",
+          "amount_net_disbursed_amount": "218000",
+          "offer_term": "12 months",
+          "interest_rate": "12.0",
+          "interest_type": "Fixed",
+          "annual_percentage_rate": "12.8",
+          "number_of_installments": 12,
+          "cool_off_period": "3 days",
+          "terms_and_conditions_link": "https://example.com/tc/ofr_gold_001",
+          "key_facts_statement_link": "https://example.com/kfs/ofr_gold_001",
+          "application_fees": "0",
+          "foreclosure_fees": "1500",
+          "interest_rate_conversion_charges": null,
+          "delay_penalty_fees": "400",
+          "other_penalty_fees": null,
+          "processing_fees": "2000",
+          "other_upfront_charges": null,
+          "insurance_charges": null,
+          "other_charges": null,
+          "installments": [
             {
-              serial_number: 1,
-              type: "INSTALLMENT",
-              amount: "20500",
-              status: "NOT-DUE",
-              installment_due_date: "2026-02-05T00:00:00.000Z",
+              "serial_number": 1,
+              "type": "INSTALLMENT",
+              "amount": "20500",
+              "status": "NOT-DUE",
+              "installment_due_date": "2026-02-05T00:00:00.000Z"
             },
             {
-              serial_number: 2,
-              type: "INSTALLMENT",
-              amount: "20500",
-              status: "NOT-DUE",
-              installment_due_date: "2026-03-05T00:00:00.000Z",
-            },
-          ],
-        },
-      ],
-    },
-  },
+              "serial_number": 2,
+              "type": "INSTALLMENT",
+              "amount": "20500",
+              "status": "NOT-DUE",
+              "installment_due_date": "2026-03-05T00:00:00.000Z"
+            }
+          ]
+        }
+      ]
+    }
+  }
 }
 ```
 
+### Payload rules
+
+- `borrower.journey` contains only the **current** journey. The old `borrower.journeys` array is no longer sent.
+- `borrower.profile.personal`, `borrower.profile.work`, and `borrower.profile.address` are always present structurally. Fields may be `null` when data is unavailable.
+- `borrower.profile.gold_loan` is included only for Gold Loan journeys.
+- `borrower.journey.lenders` contains every lender that has received the borrower form for this journey, even if no offer was returned.
+- `borrower.journey.offers` remains `[]` until offers exist. It must be `[]` for `NOT_OFFERED`.
+- `offer.installments` remains `[]` until the journey becomes `DISBURSED`.
+- `REJECTED` can happen from any earlier stage. The `REJECTED` example above shows one common path after redirection, but rejection may also arrive earlier.
+- Only curated business-facing fields are returned. Internal raw `data`, `metadata`, protocol traces, and implementation details are not included.
 ### Payload rules
 
 - `borrower.journey` contains only the **current** journey. The old `borrower.journeys` array is no longer sent.
